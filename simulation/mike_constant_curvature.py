@@ -1,10 +1,49 @@
 import numpy as np
-from math import sin, cos, pi
+from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
 from constant_curvature_utils import *
 
 def mike_constant_curvature(delta_ls: List[Tuple[float, ...]], d: float, l: float) -> List[Tuple[float, ...]]:
-    print("bingo")
+    segment_params = []
+    tendon_pairs = [(0, 1), (0, 3), (2, 1), (2,3)]
+    cumulative_length = [0] * 4
+    for segment in delta_ls:
+        
+        segment = list(segment)
+        
+        for i in range(4):
+            segment[i] -= cumulative_length[i]
+
+        tendon_lengths = [0] * 4
+        
+        for tendon_pair in tendon_pairs:
+            dl1 = -segment[tendon_pair[0]] if tendon_pair[0] == 0 else segment[tendon_pair[0]]
+            dl2 = -segment[tendon_pair[1]] if tendon_pair[1] == 1 else segment[tendon_pair[1]]
+
+            theta = 1 / d * sqrt(dl1 ** 2 + dl2 ** 2)
+            phi = atan2(dl2, dl1)
+
+            tendon_lengths = [-d * theta * cos(phi), -d * theta * sin(phi), d * theta * cos(phi), d * theta * sin(phi)]
+            
+            is_valid_length = True
+
+            for i in range(4):
+                if tendon_lengths[i] > segment[i]:
+                    is_valid_length = False
+
+            if is_valid_length:
+                break
+
+        theta = 1 / d * sqrt(segment[0] ** 2 + segment[1] ** 2)
+        phi = atan2(-segment[1], -segment[0])
+        kappa = theta / l
+
+        for i in range(4):
+            cumulative_length[i] += tendon_lengths[i]
+
+        segment_params.append((l, kappa, phi))
+
+    return segment_params
 
 
 def mike_constant_curvature_inverse(segment_params: List[Tuple[float, ...]], d: float, l: float) -> List[Tuple[float, ...]]:
@@ -28,4 +67,8 @@ l = 64
 d = 8
 theta = pi/2
 phi = pi/2
-print(mike_constant_curvature_inverse([(l, theta/l, phi), (l, theta/l, 0)], d, l))
+boop = mike_constant_curvature_inverse([(l, theta/l, phi), (l, theta/l/2, 0)], d, l)
+print(boop)
+
+shoop = mike_constant_curvature(boop, d, l)
+print(shoop)
