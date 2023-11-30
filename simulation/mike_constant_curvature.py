@@ -3,6 +3,8 @@ from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
 from constant_curvature_utils import *
 
+# Handles forward kinematics using mike constant curvature model
+# TODO: Add way to handle contraction of robot
 def mike_constant_curvature(delta_ls: List[Tuple[float, ...]], d: float, l: float) -> List[Tuple[float, ...]]:
     segment_params = []
     tendon_pairs = [(0, 1), (0, 3), (2, 1), (2,3)]
