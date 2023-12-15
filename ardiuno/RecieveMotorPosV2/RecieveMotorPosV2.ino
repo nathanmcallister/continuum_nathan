@@ -2,11 +2,11 @@
 #include <Adafruit_PWMServoDriver.h>
 
 // Serial definitions
-#define DLE 0x61
-#define STX 0x62
-#define ETX 0x63
-#define ACK 0x64
-#define ERR 0x65
+#define DLE 0x10
+#define STX 0x12
+#define ETX 0x13
+#define ACK 0x14
+#define ERR 0x15
 
 // Servo definitions
 #define NUM_SERVOS 4
@@ -298,7 +298,7 @@ void move_motors(data_t* data) {
         uint16_t motor_command = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
         
         // Send to pwm chip
-        pwm.setPWM(i, 0, motor_commands[i]);
+        pwm.setPWM(i, 0, motor_command);
     }
 }
 
