@@ -2,7 +2,6 @@ import numpy as np
 from scipy.linalg import expm
 from typing import Tuple
 from math import factorial
-import matplotlib.pyplot as plt 
 
 def dlsim(A: np.ndarray, B: np.ndarray, C: np.ndarray, D: np.ndarray, u: np.ndarray, x0: np.ndarray = None) -> np.ndarray:
     
@@ -88,11 +87,3 @@ def spring_mass_damper(k: float, b: float, m: float, dt: float, output_type: str
 
     return A, B, C, D
 
-A,B,C,D = spring_mass_damper(1.0, 1.5, 1.0, .1, output_type="position")
-
-timesteps = 200
-
-y = dlsim(A,B,C,D, np.random.randn(1,timesteps))
-
-plt.plot(list(range(timesteps + 1)) , y.flatten())
-plt.show()
