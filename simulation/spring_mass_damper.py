@@ -91,7 +91,7 @@ class SMD:
 
         num_timesteps = batch_size + max(num_previous_obs, num_previous_acts) + 1
 
-        x0 = np.random.randn(2,1)
+        x0 = 0.5 * np.random.randn(2,1)
         u_sim = np.random.randn(1,num_timesteps-1)
 
         y_sim = dlsim(self.A, self.B, self.C, self.D, u_sim, x0)
