@@ -7,11 +7,14 @@ from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import math
 
 class NARX(nn.Module):
-    def __init__(self, state_dim: int, action_dim: int, hidden_layers: List[int], activation=nn.ReLU(), output_activation=None, num_previous_states: int = 1, num_previous_actions: int = 0, lr: float = 1e-3):
+    def __init__(self, state_dim: int, action_dim: int, hidden_layers: List[int], activation=nn.ReLU(), output_activation=None, num_previous_obs: int = 1, num_previous_acts: int = 0, lr: float = 1e-3):
         super().__init__()
-
+        
+        self.num_previous_obs = num_previous_obs
+        self.num_previous_acts = num_previous_acts
         self.flatten = nn.Flatten()
 
         self.device = (
@@ -24,7 +27,7 @@ class NARX(nn.Module):
         print(f"Using {self.device} device")
 
         self.model = nn.Sequential(OrderedDict([
-            ('input', nn.Linear((1+num_previous_states) * state_dim + (1+num_previous_actions) * action_dim, hidden_layers[0]).double()),
+            ('input', nn.Linear((1+num_previous_obs) * state_dim + (1+num_previous_acts) * action_dim, hidden_layers[0]).double()),
             ('input_activation', activation)
         ]))
 
@@ -42,7 +45,7 @@ class NARX(nn.Module):
         self.loss = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-    # input is of form
+    # input is of form ([x_{i-n}, ... x_{i}], [u_{i-m}, ..., u_{i}])
     def form_input_tensor(self, input: Tuple[List[np.ndarray], ...]) -> torch.tensor:
         observations, actions = input[0], input[1]
         obs = np.concatenate([obs.flatten() for obs in observations])
@@ -86,9 +89,9 @@ class NARX(nn.Module):
         self.model.load_state_dict(torch.load(model_load_path))
         self.model.to(self.device)
 
-def train_model(narx_model: NARX, system_model: SMD, model_save_path: str = None, batch_size: int = 128, num_epochs: int = 2**13, num_repeats: int = 4, display_epochs: int = 128) -> None:
+def train_model(narx_model: NARX, system_model: SMD, model_save_path: str = None, batch_size: int = 128, num_epochs: int = 2**14, num_repeats: int = 4, display_epochs: int = 128) -> None:
     for epoch in range(num_epochs):
-        data_batch = system_model.get_data_batch(batch_size)
+        data_batch = system_model.get_data_batch(batch_size, narx_model.num_previous_obs, narx_model.num_previous_acts)
         for repeat in range(num_repeats):
             data_batch = random.sample(data_batch, batch_size)
 
@@ -100,46 +103,47 @@ def train_model(narx_model: NARX, system_model: SMD, model_save_path: str = None
     if model_save_path:
         narx_model.save(model_save_path)
 
-def test_model(narx_model: NARX, system_model: SMD, model_load_location: str = None, sim_length: int = 512) -> None:
+def test_model(narx_model: NARX, system_model: SMD, model_load_location: str = None, sim_length: int = 256, num_test_runs: int = 1024) -> None:
+
     if model_load_location:
         narx_model.load(model_load_location)
+    error_per_run = [0.0] * num_test_runs 
+    for run in range(num_test_runs):
+        x0 = 0.5 * np.random.randn(2,1)
+        u = np.random.randn(1, sim_length-1)
+        
+        y0 = None
 
-    x0 = 0.5 * np.random.randn(2,1)
-    u = np.random.randn(1, sim_length-1)
-    
-    y0 = None
+        if system_model.output_type == "position":
+            y0 = x0[0,0]
+        elif system_model.output_type == "velocity":
+            y0 = x0[1,0]
+        else:
+            y0 = system_model.C * x0 + system_model.D * u[:,0]
 
-    if system_model.output_type == "position":
-        y0 = x0[0,0]
-    elif system_model.output_type == "velocity":
-        y0 = x0[1,0]
-    else:
-        y0 = system_model.C * x0 + system_model.D * u[:,0]
+        assert y0
 
-    assert y0
+        y_smd = dlsim(system_model.A, system_model.B, system_model.C, system_model.D, u, x0)
 
-    y_smd = dlsim(system_model.A, system_model.B, system_model.C, system_model.D, u, x0)
+        y_narx = np.zeros((1, sim_length), dtype=float)
+        y_narx[:,0] = y0
+        for i in range(narx_model.num_previous_obs + 1):
+            y_narx[:, i] = y_smd[:,i]
 
-    y_narx = np.zeros((1, sim_length), dtype=float)
-    y_narx[:,0] = y0
-    with torch.no_grad():
-        narx_model.model.eval()
-        for i in range(sim_length-1):
-            if i == 0:
-                input = narx_model.form_input_tensor(([y0, y0], [u[:,0]]))
+        with torch.no_grad():
+            narx_model.model.eval()
+            for i in range(narx_model.num_previous_obs, sim_length-1):
+                input_y = [y_narx[:,i-narx_model.num_previous_obs + j] for j in range(narx_model.num_previous_obs + 1)]
+                input_u = [u[:,i-narx_model.num_previous_acts + j] for j in range(narx_model.num_previous_acts + 1)]
+                input = narx_model.form_input_tensor((input_y, input_u))
                 output = narx_model.model(input.to(narx_model.device))
                 y_narx[:, i+1] = output.to('cpu')
-            else:
-                input = narx_model.form_input_tensor(([y_narx[:,i-1], y_narx[:, i]], [u[:,i]]))
-                output = narx_model.model(input.to(narx_model.device))
-                y_narx[:, i+1] = output.to('cpu')
+        error_per_run[run] = np.sum(np.sqrt(np.square(y_smd - y_narx))) / sim_length
+    plt.hist(np.array(error_per_run), 20)
+    plt.show()
 
-        plt.plot(list(range(sim_length)), y_smd.flatten())
-        plt.plot(list(range(sim_length)), y_narx.flatten())
-        plt.show()
-
-bingo = NARX(1, 1, [32], lr=2.5e-4)
+bingo = NARX(1, 1, [32], activation=nn.Tanh(), lr=5e-4, num_previous_obs=2)
 bongo = SMD(1, 0.5, 1, .1)
 
-train_model(bingo, bongo, "boop")
+#train_model(bingo, bongo, "boop")
 test_model(bingo, bongo, "boop")
