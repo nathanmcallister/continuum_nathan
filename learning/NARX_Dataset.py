@@ -23,12 +23,12 @@ class NARX_Dataset(Dataset):
 
         for i in range(1 + max(num_previous_observations, num_previous_actions), num_observations):
             frame_observations = observations[
-                :, (i - 1 - num_previous_observations) : i - 1
+                :, (i - 1 - num_previous_observations) : i
             ]
             if include_current_action:
-                frame_actions = actions[:, (i - 1 - num_previous_actions) : i]
+                frame_actions = actions[:, (i - num_previous_actions) : i + 1]
             else:
-                frame_actions = actions[:, (i - 1 - num_previous_actions) : i - 1]
+                frame_actions = actions[:, (i - num_previous_actions) : i]
 
             frame_input = np.concatenate(
                 [frame_observations.flatten(order='F'), frame_actions.flatten(order='F')]
@@ -38,8 +38,6 @@ class NARX_Dataset(Dataset):
             self.inputs.append(torch.as_tensor(frame_input))
             self.outputs.append(torch.as_tensor(frame_output))
 
-        print(self.inputs)
-        print(self.outputs)
 
         assert len(self.inputs) == len(self.outputs)
 

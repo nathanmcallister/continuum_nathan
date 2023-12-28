@@ -35,13 +35,14 @@ def dlsim(
     x = np.zeros((n, t + 1), dtype=float)
     x[:, 0] = x0.flatten()
 
-    y = np.zeros((m, t + 1), dtype=float)
+    #y = np.zeros((m, t + 1), dtype=float)
+    y = np.zeros((m, t), dtype=float)
 
     for k in range(t):
         y[:, k] = np.matmul(C, x[:, k]) + np.matmul(D, u[:, k])
         x[:, k + 1] = np.matmul(A, x[:, k]) + np.matmul(B, u[:, k])
 
-    y[:, -1] = np.matmul(C, x[:, -1]) + np.matmul(D, u[:, -1])
+    #y[:, -1] = np.matmul(C, x[:, -1]) + np.matmul(D, u[:, -1])
 
     return y
 

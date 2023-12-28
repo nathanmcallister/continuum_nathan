@@ -1,6 +1,7 @@
 import os
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 from collections import OrderedDict
 from spring_mass_damper import *
 from typing import List, Tuple
@@ -19,13 +20,15 @@ class NARX(nn.Module):
         activation=nn.ReLU(),
         output_activation=None,
         num_previous_obs: int = 1,
-        num_previous_acts: int = 0,
+        num_previous_acts: int = 1,
+        use_current_act: bool = False,
         lr: float = 1e-3,
     ):
         super().__init__()
 
         self.num_previous_obs = num_previous_obs
         self.num_previous_acts = num_previous_acts
+        self.use_current_act = use_current_act
         self.flatten = nn.Flatten()
 
         self.device = (
@@ -37,6 +40,10 @@ class NARX(nn.Module):
         )
         print(f"Using {self.device} device")
 
+        num_actions = num_previous_acts
+        if use_current_act:
+            num_actions += 1
+
         self.model = nn.Sequential(
             OrderedDict(
                 [
@@ -44,7 +51,7 @@ class NARX(nn.Module):
                         "input",
                         nn.Linear(
                             (1 + num_previous_obs) * state_dim
-                            + (1 + num_previous_acts) * action_dim,
+                            + (num_actions) * action_dim,
                             hidden_layers[0],
                         ).double(),
                     ),
@@ -72,17 +79,10 @@ class NARX(nn.Module):
         self.loss = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-    # input is of form ([x_{i-n}, ... x_{i}], [u_{i-m}, ..., u_{i}])
-    def form_input_tensor(self, input: Tuple[List[np.ndarray], ...]) -> torch.tensor:
-        observations, actions = input[0], input[1]
-        obs = np.concatenate([obs.flatten() for obs in observations])
-        act = np.concatenate([act.flatten() for act in actions])
-        return torch.from_numpy(np.concatenate([obs, act]))
-
     def forward(self, x):
         return self.model(x)
 
-    def train_epoch(self, dataloader: Dataloader) -> float:
+    def train_epoch(self, dataloader: DataLoader) -> float:
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
         train_loss = 0
@@ -90,6 +90,7 @@ class NARX(nn.Module):
         self.model.train()
 
         for batch, (X, y) in enumerate(dataloader):
+            X, y = X.to(self.device), y.to(self.device)
             pred = self.model(X)
             loss = self.loss(pred, y)
 
@@ -100,14 +101,16 @@ class NARX(nn.Module):
             train_loss += loss.item()
 
             if batch % 100 == 0:
-                current_loss, current = loss.item(), (batch + 1) * size
-                print(f"Loss: {current_loss:>7f} [{current:>5d}/{size:>5d}]")
+                current_loss, current = loss.item(), (batch + 1) * len(X)
+                print(
+                    f"Loss: {current_loss:>7f} [{current:>5d}/{size:>5d}]", flush=True
+                )
 
         train_loss /= num_batches
 
         return train_loss
 
-    def test_epoch(self, dataloader: Dataloader) -> float:
+    def test_epoch(self, dataloader: DataLoader) -> float:
         self.model.eval()
         num_batches = len(dataloader)
         test_loss = 0
@@ -120,7 +123,7 @@ class NARX(nn.Module):
                 test_loss += self.loss(pred, y).item()
 
         test_loss /= num_batches
-        print(f"Avg test loss: {test_loss:>7f}")
+        print(f"Avg test loss: {test_loss:>7f}", flush=True)
 
         return test_loss
 
@@ -135,19 +138,56 @@ class NARX(nn.Module):
         test_loss = []
 
         for epoch in range(num_epochs):
-            print(f"Epoch {epoch+1}\n-------------------------------")
+            print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
             train_loss.append(self.train_epoch(train_dataloader))
 
             if test_dataloader:
                 test_loss.append(self.test_epoch(test_dataloader))
 
         if model_save_path:
-            model.save(model_save_path)
+            self.save(model_save_path)
 
         if test_dataloader:
             return train_loss, test_loss
 
         return train_loss, None
+
+    def comparison_test(
+        self, input: np.ndarray, observations: np.ndarray, model_load_path: str = None
+    ) -> np.ndarray:
+        if model_load_path:
+            self.load(model_load_path)
+
+        self.model.eval()
+
+        num_previous_frames = max(self.num_previous_obs, self.num_previous_acts)
+
+        y_narx = np.zeros(observations.shape, dtype=float)
+        y_narx[:, 0 : num_previous_frames + 1] = observations[
+            :, 0 : num_previous_frames + 1
+        ]
+
+        with torch.no_grad():
+            for i in range(num_previous_frames + 1, observations.shape[1]):
+                observation_sub_array = y_narx[:, i - self.num_previous_obs - 1 : i]
+                if self.use_current_act:
+                    action_sub_array = input[:, i - self.num_previous_acts : i + 1]
+                else:
+                    action_sub_array = input[:, i - self.num_previous_acts : i]
+                
+                input_tensor = torch.as_tensor(
+                    np.concatenate(
+                        [
+                            observation_sub_array.flatten(order="F"),
+                            action_sub_array.flatten(order="F"),
+                        ]
+                    ).flatten()
+                ).to(self.device)
+
+                pred = self.model(input_tensor).to('cpu').numpy()
+                y_narx[:,i] = pred
+
+        return y_narx
 
     def save(self, model_save_path: str) -> None:
         if not model_save_path.endswith(".pt"):
