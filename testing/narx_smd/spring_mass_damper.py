@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.linalg import expm
 from typing import Tuple, List
 from math import factorial
 
@@ -20,8 +19,6 @@ def dlsim(
 
     assert u.shape[0] == B.shape[1]
 
-    r = u.shape[0]
-
     assert C.shape[1] == n
 
     assert C.shape[0] == D.shape[0]
@@ -35,14 +32,11 @@ def dlsim(
     x = np.zeros((n, t + 1), dtype=float)
     x[:, 0] = x0.flatten()
 
-    # y = np.zeros((m, t + 1), dtype=float)
     y = np.zeros((m, t), dtype=float)
 
     for k in range(t):
         y[:, k] = np.matmul(C, x[:, k]) + np.matmul(D, u[:, k])
         x[:, k + 1] = np.matmul(A, x[:, k]) + np.matmul(B, u[:, k])
-
-    # y[:, -1] = np.matmul(C, x[:, -1]) + np.matmul(D, u[:, -1])
 
     return y
 
@@ -56,7 +50,9 @@ def c2d(Ac: np.ndarray, Bc: np.ndarray, dt: float) -> Tuple[np.ndarray, ...]:
     B_temp = np.identity(n, dtype=float)
 
     for i in range(1, 100):
-        temp_matrix = np.linalg.matrix_power(Ac, i) * dt**i / float(factorial(i))
+        temp_matrix = (
+            np.linalg.matrix_power(Ac, i) * dt**i / float(factorial(i))
+        )
         A += temp_matrix
         B_temp += temp_matrix / float(i + 1)
 
@@ -65,11 +61,21 @@ def c2d(Ac: np.ndarray, Bc: np.ndarray, dt: float) -> Tuple[np.ndarray, ...]:
     return A, B
 
 
-class SMD:
+class Model:
     def __init__(
-        self, k: float, b: float, m: float, dt: float, output_type: str = "position"
+        self,
+        k: float,
+        b: float,
+        m: float,
+        dt: float,
+        output_type: str = "position",
     ):
-        valid_output_types = ["position", "velocity", "acceleration", "full_state"]
+        valid_output_types = [
+            "position",
+            "velocity",
+            "acceleration",
+            "full_state",
+        ]
         assert output_type in valid_output_types
 
         assert k >= 0 and b >= 0 and m > 0
@@ -93,18 +99,25 @@ class SMD:
             self.D = np.ones((1, 1), dtype=float) / m
         elif output_type == valid_output_types[3]:
             self.C = np.identity(2, dtype=float)
-            self.D = np.zeros((2,1), dtype=float)
+            self.D = np.zeros((2, 1), dtype=float)
         else:
             print("wat")
 
         self.A, self.B = c2d(Ac, Bc, dt)
 
     def get_data_batch(
-        self, batch_size: int, num_previous_obs: int = 1, num_previous_acts: int = 0
+        self,
+        batch_size: int,
+        num_previous_obs: int = 1,
+        num_previous_acts: int = 0,
     ) -> List[Tuple[Tuple[List[np.ndarray], ...], ...]]:
-        assert batch_size > 0 and num_previous_obs >= 0 and num_previous_acts >= 0
+        assert (
+            batch_size > 0 and num_previous_obs >= 0 and num_previous_acts >= 0
+        )
 
-        num_timesteps = batch_size + max(num_previous_obs, num_previous_acts) + 1
+        num_timesteps = (
+            batch_size + max(num_previous_obs, num_previous_acts) + 1
+        )
 
         x0 = 0.5 * np.random.randn(2, 1)
         u_sim = np.random.randn(1, num_timesteps - 1)

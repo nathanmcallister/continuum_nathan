@@ -35,13 +35,14 @@ def dlsim(
     x = np.zeros((n, t + 1), dtype=float)
     x[:, 0] = x0.flatten()
 
-    y = np.zeros((m, t + 1), dtype=float)
+    # y = np.zeros((m, t + 1), dtype=float)
+    y = np.zeros((m, t), dtype=float)
 
     for k in range(t):
         y[:, k] = np.matmul(C, x[:, k]) + np.matmul(D, u[:, k])
         x[:, k + 1] = np.matmul(A, x[:, k]) + np.matmul(B, u[:, k])
 
-    y[:, -1] = np.matmul(C, x[:, -1]) + np.matmul(D, u[:, -1])
+    # y[:, -1] = np.matmul(C, x[:, -1]) + np.matmul(D, u[:, -1])
 
     return y
 
@@ -68,7 +69,7 @@ class SMD:
     def __init__(
         self, k: float, b: float, m: float, dt: float, output_type: str = "position"
     ):
-        valid_output_types = ["position", "velocity", "acceleration"]
+        valid_output_types = ["position", "velocity", "acceleration", "full_state"]
         assert output_type in valid_output_types
 
         assert k >= 0 and b >= 0 and m > 0
@@ -90,6 +91,9 @@ class SMD:
         elif output_type == valid_output_types[2]:  # Acceleration
             self.C = np.array([-k / m, -b / m], dtype=float).reshape((1, 2))
             self.D = np.ones((1, 1), dtype=float) / m
+        elif output_type == valid_output_types[3]:
+            self.C = np.identity(2, dtype=float)
+            self.D = np.zeros((2,1), dtype=float)
         else:
             print("wat")
 
