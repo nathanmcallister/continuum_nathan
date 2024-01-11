@@ -1,4 +1,4 @@
-%% SendMotorValues.m - Sends a packet of information (handling all DLEs and flags) to the arduino
+%% send_motor_values.m - Sends a packet of information (handling all DLEs and flags) to the arduino
 % Ensures that packet was received properly through the use of an ack
 % 
 % Cam Wolfe 11/22/2023
