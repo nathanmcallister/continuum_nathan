@@ -9,12 +9,11 @@ TRUTH_FILE = "../tools/reg_truth_positions";
 PEN_FILE = "../tools/penprobe_no_metal";
 REG_FILE = "../data/reg.csv";
 
-AURORA_2_ROBOT_FILENAME = "../tools/robot_reg";
-TIP_FILENAME = "../tools/tip_reg_cad";
+TIP_FILE = "../tools/tip_no_hat";
 
-CAD_TIP_POSITION = [0;
-                    0;
-                    64];
+TIP_POSITION_IN_MODEL = [0;
+    0;
+    64];
 
 %% File inputs
 truth_pos = readmatrix(TRUTH_FILE);
@@ -22,6 +21,7 @@ pen_tip_pos = readmatrix(PEN_FILE);
 
 reg_table = readtable(REG_FILE);
 
+%% Data processing/ extraction
 pen_table = reg_table(1:2:end, :);
 pen_transforms = table2array(pen_table(:,4:10));
 pen_q = pen_transforms(:, 1:4)';
@@ -33,31 +33,41 @@ tip_q = tip_transforms(:, 1:4)';
 tip_r = tip_transforms(:, 5:end)';
 
 pen_pos_aurora = nan(size(truth_pos));
-tip_pos_aurora = nan(size(truth_pos));
 
 num_points = size(truth_pos, 2);
 
 for i=1:num_points
-    tip_pos_aurora(:,i) = tip_r(:,i);
     pen_pos_aurora(:,i) = pen_r(:,i) + quatrotate(pen_q(:,i)', pen_tip_pos)';
 end
 
 %% Registration
-[~, robot_transform, robot_rmse] = rigid_align_svd(pen_pos_aurora, truth_pos);
+[~, T_aurora_2_model, robot_rmse] = rigid_align_svd(pen_pos_aurora, truth_pos);
 disp("Registration RMS Error");
 disp(robot_rmse);
 
-aurora_2_robot_q = dcm2quat(robot_transform(1:3,1:3));
-aurora_2_robot_r = robot_transform(1:3,4);
-
 %% Tip Position Estimation
-
-tip_pos_robot = nan(size(tip_pos_aurora));
+tip_pos_in_tip = nan(size(tip_pos_aurora));
 
 for i=1:num_points
-    tip_pos_robot(:,i) = quatrotate(aurora_2_robot_q, (tip_pos_aurora(:,i) + aurora_2_robot_r)')';
+    T_tip_2_aurora = eye(4);
+    T_tip_2_aurora(1:3, 1:3) = quat2dcm(tip_q(:, i)');
+    T_tip_2_aurora(1:3, 4) = tip_r(:,i);
+    tip_pos_in_tip(:,i) = rigid_transformation(inv(T_tip_2_aurora) * inv(T_aurora_2_model), TIP_POSITION_IN_MODEL);
 end
 
+tip_pos_in_tip = mean(tip_pos_in_tip, 2);
+disp("Tip Position in Coil Frame:");
+disp(tip_pos_in_tip);
 
-%% Outputs
-writematrix([aurora_2_robot_q, aurora_2_robot_r', robot_rmse], AURORA_2_ROBOT_FILENAME);
+%% File outputs
+writematrix(tip_pos_in_tip, TIP_FILE);
+
+% Remove .txt
+system("mv " + TIP_FILE + ".txt " + TIP_FILE);
+
+%% Functions
+function transformed_point = rigid_transformation(TF, point)
+point = [point; ones(1, size(point, 2))];
+point = TF * point;
+transformed_point = point(1:3,:);
+end
