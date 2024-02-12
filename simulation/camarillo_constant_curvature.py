@@ -5,6 +5,21 @@ from typing import List, Tuple
 from constant_curvature_utils import *
 
 
+def q_to_l_kappa_phi(
+    q_segment: Tuple[float, ...], segment_len: float
+) -> Tuple[float, ...]:
+    assert len(q_segment) == 3
+
+    kappa_x = q_segment[0]
+    kappa_y = q_segment[1]
+    axial_strain = q_segment[2]
+    kappa = sqrt(kappa_x ** 2 + kappa_y ** 2)
+    phi = atan2(kappa_y, kappa_x)
+    l = (1 - axial_strain) * segment_len
+
+    return (l, kappa, phi)
+
+
 def get_camarillo_matrices(
     cable_positions: List[Tuple[Tuple[float, ...], ...]],
     segment_stiffness_vals: List[Tuple[float, ...]],
@@ -13,7 +28,7 @@ def get_camarillo_matrices(
     additional_cable_length: float,
     cables_per_segment: List[int],
 ):
-    num_segments = len(delta_lengths)
+    num_segments = len(cables_per_segment)
 
     # Initialization of matrices and lists for equation
     K_m_inv_diag_list = [-1] * 3 * num_segments
@@ -25,7 +40,7 @@ def get_camarillo_matrices(
     # Loop through segments
     for segment_num in range(num_segments):
         # Set stiffness from inputted stiffness values
-        K_m_inv_diag_list[3 * segment_num : 3 * segment_num + 3] = [
+        K_m_inv_diag_list[3 * segment_num: 3 * segment_num + 3] = [
             1 / segment_stiffness_vals[segment_num][1],
             1 / segment_stiffness_vals[segment_num][1],
             1 / segment_stiffness_vals[segment_num][0],
@@ -33,10 +48,12 @@ def get_camarillo_matrices(
 
         # Form D matrix for segment
         row_1 = np.array(
-            [-position[0] for position in cable_positions[segment_num]], dtype=float
+            [position[0] for position in cable_positions[segment_num]],
+            dtype=float,
         ).reshape((1, -1))
         row_2 = np.array(
-            [-position[1] for position in cable_positions[segment_num]], dtype=float
+            [position[1] for position in cable_positions[segment_num]],
+            dtype=float,
         ).reshape((1, -1))
         row_3 = np.ones((1, cables_per_segment[segment_num]), dtype=float)
 
@@ -45,19 +62,19 @@ def get_camarillo_matrices(
         D_matrix_list.append(D)
 
         # Form L0 diagonal matrix list
-        L_0_diag_list[3 * segment_num : 3 * segment_num + 3] = [
+        L_0_diag_list[3 * segment_num: 3 * segment_num + 3] = [
             segment_lengths[segment_num]
         ] * 3
 
         # Form Lt diagonal matrix list
         cables_so_far = sum(cables_per_segment[:segment_num])
         num_cables = cables_per_segment[segment_num]
-        L_t_diag_list[cables_so_far : cables_so_far + num_cables] = [
+        L_t_diag_list[cables_so_far: cables_so_far + num_cables] = [
             additional_cable_length + sum(segment_lengths[: segment_num + 1])
         ] * num_cables
 
         # Form Kt^-1 diagonal matrix list
-        K_t_inv_diag_list[cables_so_far : cables_so_far + num_cables] = [
+        K_t_inv_diag_list[cables_so_far: cables_so_far + num_cables] = [
             1 / x for x in cable_stiffness_vals[segment_num]
         ]
 
@@ -80,7 +97,7 @@ def get_camarillo_matrices(
             cables_so_far = sum(cables_per_segment[:segment_num])
             num_cables = cables_per_segment[segment_num]
             D[
-                3 * i : 3 * i + 3, cables_so_far : cables_so_far + num_cables
+                3 * i: 3 * i + 3, cables_so_far: cables_so_far + num_cables
             ] = D_matrix_list[segment_num]
 
     return D, K_m_inv, L_0, L_t, K_t_inv
@@ -115,7 +132,9 @@ def camarillo_constant_curvature_no_slack(
         ), "Number of cables in segment {} is inconsistent".format(segment_num)
         assert (
             len(segment_stiffness_vals[segment_num]) == 2
-        ), "Length of segment_stiffness_vals in segment {} is not 2".format(segment_num)
+        ), "Length of segment_stiffness_vals in segment {} is not 2".format(
+            segment_num
+        )
 
         num_cables = len(delta_lengths[segment_num])
         cables_per_segment[segment_num] = num_cables
@@ -123,13 +142,14 @@ def camarillo_constant_curvature_no_slack(
         for cable_num in range(num_cables):
             assert (
                 len(cable_positions[segment_num][cable_num]) == 2
-            ), "Length of cable_positions in segment {} at cable {} is not 2".format(
+            ), "len(cable_positions) in segment {} at cable {} != 2".format(
                 segment_num, cable_num
             )
 
     # Convert delta_lengths to np array to form y
     y = np.concatenate(
-        [np.array(x, dtype=float).reshape((-1, 1)) for x in delta_lengths], axis=0
+        [np.array(x, dtype=float).reshape((-1, 1)) for x in delta_lengths],
+        axis=0,
     )
 
     # Form matrices used for forward and inverse kinematics
@@ -142,10 +162,13 @@ def camarillo_constant_curvature_no_slack(
         cables_per_segment,
     )
 
+    print(D, "\n", K_m_inv, "\n", L_0, "\n", L_t, "\n", K_t_inv)
+
     # Form C_m and C_m^-1
-    C_m = np.matmul(np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D) + np.matmul(
-        L_t, K_t_inv
-    )
+    C_m = np.matmul(
+        np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
+    ) + np.matmul(L_t, K_t_inv)
+    print(C_m)
     C_m_inv = np.linalg.inv(C_m)
 
     # q = Ay
@@ -185,7 +208,9 @@ def camarillo_constant_curvature_slack(
         ), "Number of cables in segment {} is inconsistent".format(segment_num)
         assert (
             len(segment_stiffness_vals[segment_num]) == 2
-        ), "Length of segment_stiffness_vals in segment {} is not 2".format(segment_num)
+        ), "Length of segment_stiffness_vals in segment {} is not 2".format(
+            segment_num
+        )
 
         num_cables = len(delta_lengths[segment_num])
         cables_per_segment[segment_num] = num_cables
@@ -198,7 +223,9 @@ def camarillo_constant_curvature_slack(
             )
 
     # Convert delta_lengths to np array to form y
-    y_hat = np.concatenate([np.array(x, dtype=float) for x in delta_lengths], axis=0)
+    y_hat = np.concatenate(
+        [np.array(x, dtype=float) for x in delta_lengths], axis=0
+    )
 
     # Form matrices used for forward and inverse kinematics
     D, K_m_inv, L_0, L_t, K_t_inv = get_camarillo_matrices(
@@ -211,20 +238,22 @@ def camarillo_constant_curvature_slack(
     )
 
     # Form C_m and C_m^-1
-    C_m = np.matmul(np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D) + np.matmul(
-        L_t, K_t_inv
-    )
+    C_m = np.matmul(
+        np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
+    ) + np.matmul(L_t, K_t_inv)
     C_m_inv = np.linalg.inv(C_m)
 
     # Functions for slack minimization calculation
     def f(delta: np.ndarray) -> float:
-        out: float = np.matmul(np.matmul(np.transpose(delta), C_m_inv), (y_hat + delta))
+        out: float = np.matmul(
+            np.matmul(np.transpose(delta), C_m_inv), (y_hat + delta)
+        )
         return out
 
     def grad_f(delta: np.ndarray, out: np.ndarray) -> None:
-        out[()] = np.matmul(np.transpose(C_m_inv) + C_m_inv, delta) + np.matmul(
-            C_m_inv, y_hat
-        )
+        out[()] = np.matmul(
+            np.transpose(C_m_inv) + C_m_inv, delta
+        ) + np.matmul(C_m_inv, y_hat)
 
     def g(delta: np.ndarray, out: np.ndarray) -> np.ndarray:
         out[()] = np.matmul(C_m_inv, (y_hat + delta))
@@ -234,12 +263,16 @@ def camarillo_constant_curvature_slack(
 
     def jac_g(delta: np.ndarray, out: np.ndarray) -> np.ndarray:
         out = C_m_inv[C_m_inv != 0]
+        return out
 
     hessian_matrix = np.transpose(C_m_inv) + C_m_inv
     hessian_non_zero = np.nonzero(hessian_matrix)
 
     def h(
-        delta: np.ndarray, lagrange: np.ndarray, obj_factor: float, out: np.ndarray
+        delta: np.ndarray,
+        lagrange: np.ndarray,
+        obj_factor: float,
+        out: np.ndarray,
     ) -> np.ndarray:
         out[()] = obj_factor * hessian_matrix[hessian_matrix != 0]
 
@@ -274,11 +307,27 @@ def camarillo_constant_curvature_slack(
     return q
 
 
-delta_lengths = [(-5, 0), (0, 0)]
-cable_positions = [((1, 0), (-1, 0)), ((1, 0), (-1, 0))]
-segment_stiffness_vals = [(np.inf, 1), (np.inf, 1)]
-cable_stiffness_vals = [(np.inf, 4450), (np.inf, 4450)]
-segment_lengths = [64, 64]
+# delta_lengths = [(5, 0), (0, 0)]
+# cable_positions = [((1, 0), (-1, 0)), ((1, 0), (-1, 0))]
+# segment_stiffness_vals = [(np.inf, 1), (np.inf, 1)]
+# cable_stiffness_vals = [(np.inf, 4450), (np.inf, 4450)]
+# segment_lengths = [64, 64]
+#
+# print(
+# camarillo_constant_curvature_slack(
+#    delta_lengths,
+#    cable_positions,
+#    segment_stiffness_vals,
+#    cable_stiffness_vals,
+#    segment_lengths,
+# )
+# )
+"""
+delta_lengths = [(5,)]
+cable_positions = [((1, 0),)]
+segment_stiffness_vals = [(458, 458)]
+cable_stiffness_vals = [(5540,)]
+segment_lengths = [64]
 
 print(
     camarillo_constant_curvature_slack(
@@ -289,3 +338,20 @@ print(
         segment_lengths,
     )
 )
+
+delta_lengths = [(5, 0)]
+cable_positions = [((1, 0), (1, 0))]
+segment_stiffness_vals = [(458, 458)]
+cable_stiffness_vals = [(5540, 5540)]
+segment_lengths = [64]
+
+print(
+    camarillo_constant_curvature_slack(
+        delta_lengths,
+        cable_positions,
+        segment_stiffness_vals,
+        cable_stiffness_vals,
+        segment_lengths,
+    )
+)
+"""
