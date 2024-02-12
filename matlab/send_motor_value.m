@@ -6,7 +6,7 @@ clear all;
 
 SERIALPORT_ARDUINO = "COM3";
 
-setpoints = [100; 200; 300; 400; 500];
+setpoints = [200]';
 
 motor_values = setpoints * ones(1,4);
 
