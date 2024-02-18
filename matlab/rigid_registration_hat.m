@@ -4,7 +4,7 @@
 % Performs a rigid registration between the model and aurora frame,
 % providing T_aurora_2_model.  Then performas a rigid registration to
 % find T_coil_2_tip, which can then be used to find T_tip_2_model
-% (the tip transform).
+% (the tip transform) for this static case.  T_tip_2_coil
 
 %% Setup
 % Input filenames
@@ -18,6 +18,7 @@ T_SW_2_MODEL_FILE = "../tools/T_sw_2_model";
 T_SW_2_TIP_FILE = "../tools/T_sw_2_tip";
 
 % Output filenames
+T_AURORA_2_MODEL_FILE = "../tools/T_aurora_2_model";
 T_TIP_2_COIL_FILE = "../tools/T_tip_2_coil";
 
 %% File inputs
@@ -63,6 +64,9 @@ disp(aurora_2_model_rmse);
 
 disp("Aurora to Model Transformation Matrix:");
 disp(T_aurora_2_model);
+
+writematrix(T_aurora_2_model, T_AURORA_2_MODEL_FILE);
+system(("mv " + T_AURORA_2_MODEL_FILE + ".txt " + T_AURORA_2_MODEL_FILE)); % Get rid of .txt
 
 %% Tip frame registration
 tip_reg_measurements_in_aurora_wrt_coil = tip_reg_measurements_in_aurora - tip_pos(:, 7:end);
