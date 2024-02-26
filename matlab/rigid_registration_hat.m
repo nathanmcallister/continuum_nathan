@@ -9,10 +9,10 @@
 %% Setup
 % Input filenames
 SW_MODEL_POS_FILE = "../tools/model_registration_points_in_sw";
-SW_TIP_POS_FILE = "../tools/tip_registration_points_in_sw";
+SW_TIP_POS_FILE = "../tools/all_tip_registration_points_in_sw";
 
 PEN_FILE = "../tools/penprobe";
-REG_FILE = "../data/reg_hat_v2.csv";
+REG_FILE = "../data/reg_hat_all.csv";
 
 T_SW_2_MODEL_FILE = "../tools/T_sw_2_model";
 T_SW_2_TIP_FILE = "../tools/T_sw_2_tip";
@@ -49,12 +49,14 @@ tip_pos = tip_transforms(:, 5:end)';
 reg_measurements_in_aurora = nan(3, size(pen_transforms, 1));
 num_reg_measurements = size(reg_measurements_in_aurora, 2);
 
+num_model_reg_measurements = length(model_reg_pos_in_sw);
+
 for i=1:num_reg_measurements
     reg_measurements_in_aurora(:, i) = pen_pos(:, i) + quatrotate(pen_quat(:, i)', pen_tip_pos)';
 end
 
-model_reg_measurements_in_aurora = reg_measurements_in_aurora(:, 1:6);
-tip_reg_measurements_in_aurora = reg_measurements_in_aurora(:, 7:end);
+model_reg_measurements_in_aurora = reg_measurements_in_aurora(:, 1:num_model_reg_measurements);
+tip_reg_measurements_in_aurora = reg_measurements_in_aurora(:, num_model_reg_measurements+1:end);
 
 %% Model frame registration
 [~, T_aurora_2_model, aurora_2_model_rmse] = rigid_align_svd(model_reg_measurements_in_aurora, model_reg_pos_in_model);
@@ -69,17 +71,18 @@ writematrix(T_aurora_2_model, T_AURORA_2_MODEL_FILE);
 system(("mv " + T_AURORA_2_MODEL_FILE + ".txt " + T_AURORA_2_MODEL_FILE)); % Get rid of .txt
 
 %% Tip frame registration
-tip_reg_measurements_in_aurora_wrt_coil = tip_reg_measurements_in_aurora - tip_pos(:, 7:end);
+tip_reg_measurements_in_aurora_wrt_coil = tip_reg_measurements_in_aurora - tip_pos(:, num_model_reg_measurements+1:end);
 
 tip_reg_measurements_in_coil_wrt_coil = nan(size(tip_reg_measurements_in_aurora_wrt_coil));
 num_tip_reg_measurements = size(tip_reg_measurements_in_coil_wrt_coil, 2);
 
 for i=1:num_tip_reg_measurements
-    tip_reg_measurements_in_coil_wrt_coil(:, i) = quatrotate(quatinv(tip_quat(:, 6+i)'), tip_reg_measurements_in_aurora_wrt_coil(:, i)')';
+    tip_reg_measurements_in_coil_wrt_coil(:, i) = quatrotate(quatinv(tip_quat(:, num_model_reg_measurements+i)'), tip_reg_measurements_in_aurora_wrt_coil(:, i)')';
 end
 
 [~, T_coil_2_tip, coil_2_tip_rmse] = rigid_align_svd(tip_reg_measurements_in_coil_wrt_coil, tip_reg_pos_in_tip);
 T_tip_2_coil = T_coil_2_tip^-1;
+
 
 disp("Coil to Tip Transform RMSE:");
 disp(coil_2_tip_rmse);
@@ -101,16 +104,17 @@ T_coil_2_aurora = [[quat2dcm(mean_tip_quat'), mean_tip_pos]; [0 0 0 1]];
 disp("Coil to Aurora Transformation Matrix:");
 disp(T_coil_2_aurora);
 
+%% Other tip frame registration
+[~, T_aurora_2_tip, rmse_aurora_2_tip] = rigid_align_svd(tip_reg_measurements_in_aurora, tip_reg_pos_in_tip);
+T_coil_2_tip_2 = (T_coil_2_aurora)^-1 * (T_aurora_2_tip)^-1;
+disp("Coil to Tip Transformation Matrix V2:");
+disp(T_coil_2_tip_2);
+
 %% Tip to Model Transform (only for this static case as T_coil_2_aurora changes)
 T_tip_2_model = T_aurora_2_model * T_coil_2_aurora * T_coil_2_tip^-1;
 disp("Tip to Model Transformation Matrix:")
 disp(T_tip_2_model);
 
-% Functions
-function p_b = T_mult(T_a_2_b, p_a)
-
-p_a = [p_a; ones(1, size(p_a, 2))];
-p_b = T_a_2_b * p_a;
-p_b = p_b(1:3, :);
-
-end
+T_tip_2_model_v2 = T_aurora_2_model * T_coil_2_aurora * (T_coil_2_tip_2)^-1;
+disp("Tip to Model Transformation Matrix V2:")
+disp(T_tip_2_model_v2);
