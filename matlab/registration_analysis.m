@@ -1,18 +1,14 @@
 %% Rigid Registration Analysis
 % Cameron Wolfe 2/26/2024
 %
-% Performs a rigid registration between the model and aurora frame,
-% providing T_aurora_2_model.  Then performas a rigid registration to
-% find T_coil_2_tip, which can then be used to find T_tip_2_model
-% (the tip transform) for this static case.  T_tip_2_coil
 
 %% Setup
 % Input filenames
-SW_MODEL_POS_FILE = "../tools/5_model_registration_points_in_sw";
+SW_MODEL_POS_FILE = "../tools/model_registration_points_in_sw";
 SW_TIP_POS_FILE = "../tools/all_tip_registration_points_in_sw";
 
 PEN_FILE = "../tools/penprobe";
-REG_FILE = "../data/reg_hat_all.csv";
+REG_FILE = "../data/5_reg.csv";
 
 T_SW_2_MODEL_FILE = "../tools/T_sw_2_model";
 T_SW_2_TIP_FILE = "../tools/T_sw_2_tip";
@@ -24,6 +20,27 @@ T_TIP_2_COIL_FILE = "../tools/T_tip_2_coil";
 %% File inputs
 model_reg_pos_in_sw = readmatrix(SW_MODEL_POS_FILE);
 tip_reg_pos_in_sw = readmatrix(SW_TIP_POS_FILE);
+
+num_repeats = 5;
+repeat = zeros(3, num_repeats * length(model_reg_pos_in_sw));
+
+for i=1:length(model_reg_pos_in_sw)
+    for j=1:num_repeats
+        repeat(:, 5*(i-1) + j) = model_reg_pos_in_sw(:,i);
+    end
+end
+
+model_reg_pos_in_sw = repeat;
+
+repeat = zeros(3, num_repeats * length(tip_reg_pos_in_sw));
+
+for i=1:length(tip_reg_pos_in_sw)
+    for j=1:num_repeats
+        repeat(:, 5*(i-1) + j) = tip_reg_pos_in_sw(:,i);
+    end
+end
+
+tip_reg_pos_in_sw = repeat;
 
 T_sw_2_model = readmatrix(T_SW_2_MODEL_FILE);
 T_sw_2_tip = readmatrix(T_SW_2_TIP_FILE);
@@ -71,6 +88,12 @@ tip_reg_measurements_in_model_tip = T_mult(T_aurora_2_model_tip, tip_reg_measure
 model_reg_measurements_in_model_all = T_mult(T_aurora_2_model_all, model_reg_measurements_in_aurora);
 tip_reg_measurements_in_model_all = T_mult(T_aurora_2_model_all, tip_reg_measurements_in_aurora);
 
+sw_mean_distance = norm(mean(model_reg_pos_in_model, 2) - mean(tip_reg_pos_in_model, 2))
+
+aurora_mean_distance = norm(mean(model_reg_measurements_in_aurora, 2) - mean(tip_reg_measurements_in_aurora, 2))
+
+delta = aurora_mean_distance - sw_mean_distance
+
 close all;
 figure(1);
 plot3(model_reg_measurements_in_aurora(1,:)', model_reg_measurements_in_aurora(2,:)', model_reg_measurements_in_aurora(3,:)', 'x');
@@ -82,6 +105,6 @@ figure(2);
 plot3(model_reg_pos_in_model(1,:)', model_reg_pos_in_model(2,:)', model_reg_pos_in_model(3,:)', 'x');
 hold on;
 plot3(tip_reg_pos_in_model(1,:)', tip_reg_pos_in_model(2,:)', tip_reg_pos_in_model(3,:)', 'x');
-plot3(model_reg_measurements_in_model_tip(1,:)', model_reg_measurements_in_model_tip(2,:)', model_reg_measurements_in_model_tip(3,:)', 'x');
-plot3(tip_reg_measurements_in_model_tip(1,:)', tip_reg_measurements_in_model_tip(2,:)', tip_reg_measurements_in_model_tip(3,:)', 'x');
+plot3(model_reg_measurements_in_model_model(1,:)', model_reg_measurements_in_model_model(2,:)', model_reg_measurements_in_model_model(3,:)', 'x');
+plot3(tip_reg_measurements_in_model_model(1,:)', tip_reg_measurements_in_model_model(2,:)', tip_reg_measurements_in_model_model(3,:)', 'x');
 hold off

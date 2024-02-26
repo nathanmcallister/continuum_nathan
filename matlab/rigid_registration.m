@@ -1,62 +1,116 @@
-close all; clear all;
+%% Hat Rigid Registration V1
+% Cameron Wolfe 2/19/2024
+%
+% Performs a rigid registration between the model and aurora frame,
+% providing T_aurora_2_model.  Then performas a rigid registration to
+% find T_coil_2_tip, which can then be used to find T_tip_2_model
+% (the tip transform) for this static case.  T_tip_2_coil
 
-% Load in files
-TIP_FILENAME = "../datafiles/penprobe.tip";
-REG_FILENAME = "../datafiles/reg.csv";
+%% Setup
+% Input filenames
+SW_MODEL_POS_FILE = "../tools/model_registration_points_in_sw";
+SW_TIP_POS_FILE = "../tools/all_tip_registration_points_in_sw";
 
-% Solidworks frame to model frame rotation matrix
-R_sw_2_model = rotz(-45)*rotx(90);
+PEN_FILE = "../tools/penprobe";
+REG_FILE = "../data/upright_reg.csv";
 
-% Registration points on model in solidworks coordinates.
-% Origin is at start of helix (top of cylindrical base)
-% Cylindrical base is 6.35 mm, and pedestal is 5 mm (giving -11.35 mm)
-p_1_sw = [ 50 -5   0]';
-p_2_sw = [  0 -5 -50]';
-p_3_sw = [-50 -5   0]';
-p_4_sw = [ 10 -5  50]';
+T_SW_2_MODEL_FILE = "../tools/T_sw_2_model";
+T_SW_2_TIP_FILE = "../tools/T_sw_2_tip";
 
-% Get ground truth points used for registration
-registration_truth = R_sw_2_model * [p_1_sw, p_2_sw, p_3_sw, p_4_sw];
+% Output filenames
+T_AURORA_2_MODEL_FILE = "../tools/T_aurora_2_model";
+T_TIP_2_COIL_FILE = "../tools/T_tip_2_coil";
 
-% load tip file
-penprobe_tip = load(TIP_FILENAME);
+%% File inputs
+model_reg_pos_in_sw = readmatrix(SW_MODEL_POS_FILE);
+tip_reg_pos_in_sw = readmatrix(SW_TIP_POS_FILE);
 
-% load registration points from aurora and apply tip compensation
-reg_table = readtable(REG_FILENAME,'Delimiter',',');
-reg_matrix = table2array(reg_table(:, 4:10));
-pen_matrix = reg_matrix(1:2:end,:);
-spine_matrix = reg_matrix(2:2:end,:);
-registration_measured = nan(size(registration_truth));
-for pt_idx = 1:size(pen_matrix,1)
-    q = pen_matrix(pt_idx,1:4);
-    t = pen_matrix(pt_idx,5:7);
-    registration_measured(:,pt_idx) = t + quatrotate(q,penprobe_tip);
+T_sw_2_model = readmatrix(T_SW_2_MODEL_FILE);
+T_sw_2_tip = readmatrix(T_SW_2_TIP_FILE);
+
+model_reg_pos_in_model = T_mult(T_sw_2_model, model_reg_pos_in_sw);
+tip_reg_pos_in_tip = T_mult(T_sw_2_tip, tip_reg_pos_in_sw);
+
+pen_tip_pos = readmatrix(PEN_FILE);
+
+reg_table = readtable(REG_FILE);
+pen_table = reg_table(1:2:end, :);
+tip_table = reg_table(2:2:end, :);
+
+pen_transforms = table2array(pen_table(:, 4:10));
+tip_transforms = table2array(tip_table(:, 4:10));
+
+pen_quat = pen_transforms(:, 1:4)';
+pen_pos = pen_transforms(:, 5:end)';
+
+tip_quat = tip_transforms(:, 1:4)';
+tip_pos = tip_transforms(:, 5:end)';
+
+reg_measurements_in_aurora = nan(3, size(pen_transforms, 1));
+num_reg_measurements = size(reg_measurements_in_aurora, 2);
+
+num_model_reg_measurements = length(model_reg_pos_in_sw);
+
+for i=1:num_reg_measurements
+    reg_measurements_in_aurora(:, i) = pen_pos(:, i) + quatrotate(pen_quat(:, i)', pen_tip_pos)';
 end
 
-% register aurora to model
-[~,TF_aurora_to_model,rmse] = rigid_align_svd(registration_measured,registration_truth)
+model_reg_measurements_in_aurora = reg_measurements_in_aurora(:, 1:num_model_reg_measurements);
+tip_reg_measurements_in_aurora = reg_measurements_in_aurora(:, num_model_reg_measurements+1:end);
 
-%spine tip in model space
-spine_tip_modelspace = [0,0,56]';
+%% Model frame registration
+[~, T_aurora_2_model, aurora_2_model_rmse] = rigid_align_svd(model_reg_measurements_in_aurora, model_reg_pos_in_model);
 
-%coil to aurora transform, this is just using the first coil point, could
-%filter to use more accurate
-spinetip_in_coilspace = zeros(3,size(spine_matrix,1));
-for i=1:size(spine_matrix,1)
-    qcoil = spine_matrix(i,1:4);
-    tcoil = spine_matrix(i,5:7);
-    TF_coil_to_aurora = eye(4);
-    TF_coil_to_aurora(1:3,1:3) = quat2matrix(qcoil);
-    TF_coil_to_aurora(1:3,4) = tcoil;
-    
-    %model to coil and find the spine tip in coil space
-    TF_model_to_coil = inv(TF_coil_to_aurora)*inv(TF_aurora_to_model);
-    spinetip_in_coilspace(:,i) = hTF(spine_tip_modelspace,TF_model_to_coil,0);
+disp("Aurora to Model Transform RMSE:");
+disp(aurora_2_model_rmse);
+
+disp("Aurora to Model Transformation Matrix:");
+disp(T_aurora_2_model);
+
+writematrix(T_aurora_2_model, T_AURORA_2_MODEL_FILE);
+system(("mv " + T_AURORA_2_MODEL_FILE + ".txt " + T_AURORA_2_MODEL_FILE)); % Get rid of .txt
+
+%% Tip frame registration
+tip_reg_measurements_in_aurora_wrt_coil = tip_reg_measurements_in_aurora - tip_pos(:, num_model_reg_measurements+1:end);
+
+tip_reg_measurements_in_coil_wrt_coil = nan(size(tip_reg_measurements_in_aurora_wrt_coil));
+num_tip_reg_measurements = size(tip_reg_measurements_in_coil_wrt_coil, 2);
+
+for i=1:num_tip_reg_measurements
+    tip_reg_measurements_in_coil_wrt_coil(:, i) = quatrotate(quatinv(tip_quat(:, num_model_reg_measurements+i)'), tip_reg_measurements_in_aurora_wrt_coil(:, i)')';
 end
 
-mean_spinetip_in_coilspace = mean(spinetip_in_coilspace,2)
+[~, T_coil_2_tip, coil_2_tip_rmse] = rigid_align_svd(tip_reg_measurements_in_coil_wrt_coil, tip_reg_pos_in_tip);
+T_tip_2_coil = T_coil_2_tip^-1;
 
-coil_at_registration = tcoil + quatrotate(qcoil,mean_spinetip_in_coilspace');
+disp("Coil to Tip Transform RMSE:");
+disp(coil_2_tip_rmse);
 
-writematrix(TF_aurora_to_model,'../datafiles/TF_aurora_to_model.csv');
-writematrix(mean_spinetip_in_coilspace,'../datafiles/spinetip_in_coilspace.csv');
+disp("Coil to Tip Transformation Matrix:");
+disp(T_coil_2_tip);
+
+writematrix(T_tip_2_coil, T_TIP_2_COIL_FILE);
+system(("mv " + T_TIP_2_COIL_FILE + ".txt " + T_TIP_2_COIL_FILE)); % Get rid of .txt
+
+%% Coil to Aurora Transform
+mean_tip_quat = normalize(mean(tip_quat(:, 7:end), 2));
+mean_tip_pos = mean(tip_pos(:, 7:end), 2);
+T_coil_2_aurora = [[quat2dcm(mean_tip_quat'), mean_tip_pos]; [0 0 0 1]];
+
+disp("Coil to Aurora Transformation Matrix:");
+disp(T_coil_2_aurora);
+
+%% Other tip frame registration
+[~, T_aurora_2_tip, rmse_aurora_2_tip] = rigid_align_svd(tip_reg_measurements_in_aurora, tip_reg_pos_in_tip);
+T_coil_2_tip_2 = (T_coil_2_aurora)^-1 * (T_aurora_2_tip)^-1;
+disp("Coil to Tip Transformation Matrix V2:");
+disp(T_coil_2_tip_2);
+
+%% Tip to Model Transform (only for this static case as T_coil_2_aurora changes)
+T_tip_2_model = T_aurora_2_model * T_coil_2_aurora * T_coil_2_tip^-1;
+disp("Tip to Model Transformation Matrix:")
+disp(T_tip_2_model);
+
+T_tip_2_model_v2 = T_aurora_2_model * T_coil_2_aurora * (T_coil_2_tip_2)^-1;
+disp("Tip to Model Transformation Matrix V2:")
+disp(T_tip_2_model_v2);

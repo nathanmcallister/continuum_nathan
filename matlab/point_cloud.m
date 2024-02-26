@@ -6,7 +6,6 @@ penprobe_file = "../tools/penprobe";
 penprobe = readmatrix(penprobe_file);
 
 %% Input
-
 lower_plane_table = readtable(lower_plane_file);
 lower_plane_transforms = table2array(lower_plane_table(:, 4:10));
 num_lower_plane_positions = length(lower_plane_transforms);
@@ -50,14 +49,21 @@ upper_eigenvalues = diag(upper_eigenvalues);
 
 upper_plane_normal = upper_eigenvectors(:, smallest_upper_eigenvalue_idx);
 
+%% Distance between planes
+upper_2_lower = lower_mean - upper_mean;
+upper_projected_upper_2_lower = (upper_2_lower' * upper_plane_normal) * upper_plane_normal;
+lower_projected_upper_2_lower = (upper_2_lower' * lower_plane_normal) * lower_plane_normal;
+upper_projected_distance = norm(upper_projected_upper_2_lower);
+lower_projected_distance = norm(lower_projected_upper_2_lower);
+projected_distance = (upper_projected_distance + lower_projected_distance) / 2
+%height = 72;
+height = 76.75
+delta = projected_distance - height
+
 %% Normal vectors for plotting
 vector_length = 10;
 lower_plane_vector_end = lower_mean + vector_length * lower_plane_normal;
 upper_plane_vector_end = upper_mean + vector_length * upper_plane_normal;
-
-upper_2_lower = lower_mean - upper_mean;
-projected_upper_2_lower = (upper_2_lower' * upper_plane_normal) * upper_plane_normal;
-projected_distance = norm(projected_upper_2_lower);
 
 %% Plotting
 co = colororder;
@@ -70,5 +76,4 @@ quiver3(lower_mean(1), lower_mean(2), lower_mean(3), vector_length * lower_plane
 quiver3(upper_mean(1), upper_mean(2), upper_mean(3), vector_length * upper_plane_normal(1), vector_length * upper_plane_normal(2), vector_length * upper_plane_normal(3), "Color", co(2,:), "LineWidth", 3);
 hold off;
 
-height = 76.75;
 
