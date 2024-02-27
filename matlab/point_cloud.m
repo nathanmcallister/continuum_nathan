@@ -1,6 +1,6 @@
 %% Registration Test
-lower_plane_file = "../data/lower_plane_2.csv";
-upper_plane_file = "../data/upper_plane_2.csv";
+lower_plane_file = "../data/tilted_model.csv";
+upper_plane_file = "../data/tilted_hat.csv";
 
 penprobe_file = "../tools/penprobe";
 penprobe = readmatrix(penprobe_file);
@@ -8,7 +8,7 @@ penprobe = readmatrix(penprobe_file);
 %% Input
 lower_plane_table = readtable(lower_plane_file);
 lower_plane_transforms = table2array(lower_plane_table(:, 4:10));
-num_lower_plane_positions = length(lower_plane_transforms);
+num_lower_plane_positions = size(lower_plane_transforms, 1);
 lower_plane_positions = nan(3, num_lower_plane_positions);
 
 for i=1:num_lower_plane_positions
@@ -17,7 +17,7 @@ end
 
 upper_plane_table = readtable(upper_plane_file);
 upper_plane_transforms = table2array(upper_plane_table(:, 4:10));
-num_upper_plane_positions = length(upper_plane_transforms);
+num_upper_plane_positions = size(upper_plane_transforms, 1);
 upper_plane_positions = nan(3, num_upper_plane_positions);
 
 for i=1:num_upper_plane_positions
@@ -56,8 +56,8 @@ lower_projected_upper_2_lower = (upper_2_lower' * lower_plane_normal) * lower_pl
 upper_projected_distance = norm(upper_projected_upper_2_lower);
 lower_projected_distance = norm(lower_projected_upper_2_lower);
 projected_distance = (upper_projected_distance + lower_projected_distance) / 2
-%height = 72;
-height = 76.75
+height = 72; % Distance between plane of model registration points and tip registration points
+%height = 76.75; % Distance between medicine container plane and bottom plane
 delta = projected_distance - height
 
 %% Normal vectors for plotting
