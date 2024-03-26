@@ -1,31 +1,33 @@
 % Filenames
-TIP_FILENAME = "../tools/penprobe_no_metal";
-GRID_FILENAME = "../data/grid_no_metal.csv";
+TIP_FILENAME = "../tools/penprobe";
+GRID_REG_FILENAME = "../tools/grid_line_reg";
+GRID_MEAS_FILENAME = "../data/grid_line.csv";
 
-% Grid Parameters
-NUM_ROWS = 3;
-NUM_COLS = 7;
-SPACING = 25.4;
+tip = readmatrix(TIP_FILENAME);
 
-% Setup truth values
-x = (0:(NUM_COLS-1)) * SPACING;
-y = -(0:(NUM_ROWS-1)) * SPACING;
-
-[x_mesh, y_mesh] = meshgrid(x,y);
-
-x_truth = reshape(x_mesh', [1, NUM_ROWS * NUM_COLS]);
-y_truth = reshape(y_mesh', [1, NUM_ROWS * NUM_COLS]);
-
-pos_truth = [x_truth; y_truth; zeros(1,NUM_ROWS * NUM_COLS)];
+pos_reg = readmatrix(GRID_REG_FILENAME);
 
 % File parsing
-reg_table = readtable(GRID_FILENAME,'Delimiter',',');
+reg_table = readtable(GRID_MEAS_FILENAME,'Delimiter',',');
+reg_table = reg_table(1:height(unique(reg_table(:,3))):end, :);
+
 reg_matrix = table2array(reg_table(:, 4:10));
 q = reg_matrix(:, 1:4);
 t = reg_matrix(:, 5:end);
-pos_measured = nan(size(pos_truth));
-for i=1:size(pos_truth, 2)
-    pos_measured(:,i) = (t(i,:)' + quatrotate(q(i,: ), tip));
+pos_meas = nan(size(pos_reg));
+for i=1:size(pos_reg, 2)
+    pos_meas(:,i) = (t(i,:) + quatrotate(q(i,: ), tip))';
 end
 
-[~, ~, rmse] = rigid_align_svd(pos_measured, pos_truth)
+[~, T, rmse] = rigid_align_svd(pos_meas, pos_reg)
+
+x_dist_points = [7 18:25];
+y_dist_points = 9:17;
+
+x_dist_reg = sqrt(sum((pos_reg(:, x_dist_points) - pos_reg(:, 1)).^2, 1));
+y_dist_reg = sqrt(sum((pos_reg(:, y_dist_points) - pos_reg(:, 1)).^2, 1));
+x_dist_meas = sqrt(sum((pos_meas(:, x_dist_points) - pos_meas(:, 1)).^2, 1));
+y_dist_meas = sqrt(sum((pos_meas(:, y_dist_points) - pos_meas(:, 1)).^2, 1));
+
+x_dist_ratio = x_dist_meas ./ x_dist_reg;
+y_dist_ratio = y_dist_meas ./ y_dist_reg;
