@@ -65,6 +65,8 @@ rmse_coil_2_aurora = sqrt(mean((tip_mat(:,5:end) - mean_tip_pos).^2, 'all'))
 T_tip_2_coil = T_coil_2_aurora^-1 * T_aurora_2_tip^-1
 T_tip_2_model = T_aurora_2_model * T_coil_2_aurora * T_tip_2_coil
 
+T_tip_2_model_truth = T_sw_2_model * T_sw_2_tip^-1
+
 %% File outputs
 writematrix(T_aurora_2_model, T_AURORA_2_MODEL_FILE);
 system(("mv " + T_AURORA_2_MODEL_FILE + ".txt " + T_AURORA_2_MODEL_FILE)); % Get rid of .txt
