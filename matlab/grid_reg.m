@@ -1,7 +1,7 @@
 % Filenames
 TIP_FILENAME = "../tools/penprobe";
 GRID_REG_FILENAME = "../tools/grid_line_reg";
-GRID_MEAS_FILENAME = "../data/grid_line.csv";
+GRID_MEAS_FILENAME = "../data/grid_test/grid_line.csv";
 
 tip = readmatrix(TIP_FILENAME);
 
@@ -24,9 +24,9 @@ end
 x_dist_points = [7 18:25];
 y_dist_points = 9:17;
 
-x_dist_reg = sqrt(sum((pos_reg(:, x_dist_points) - pos_reg(:, 1)).^2, 1));
+x_dist_reg = sqrt(sum((pos_reg(:, x_dist_points) - mean(pos_reg(:, 1:9), 2)).^2, 1));
 y_dist_reg = sqrt(sum((pos_reg(:, y_dist_points) - pos_reg(:, 1)).^2, 1));
-x_dist_meas = sqrt(sum((pos_meas(:, x_dist_points) - pos_meas(:, 1)).^2, 1));
+x_dist_meas = sqrt(sum((pos_meas(:, x_dist_points) - mean(pos_meas(:, 1:9), 2)).^2, 1));
 y_dist_meas = sqrt(sum((pos_meas(:, y_dist_points) - pos_meas(:, 1)).^2, 1));
 
 x_dist_ratio = x_dist_meas ./ x_dist_reg;
