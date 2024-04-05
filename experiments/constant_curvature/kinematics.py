@@ -82,8 +82,16 @@ def skew(vec: np.ndarray) -> np.ndarray:
 
     return out
 
+def Tmult(T: np.ndarray, x: np.ndarray) -> np.ndarray:
+    if len(x.shape) == 1:
+        x = x[:, np.newaxis]
 
-print(skew(np.array([1, 2, 3])))
+    n = x.shape[1]
+    x = np.concatenate((x, np.ones((1, n))), axis=0)
+
+    y = np.matmul(T, x)
+
+    return y[0:3, :]
 
 
 def tang_2_dcm(tang: np.ndarray) -> np.ndarray:

@@ -7,8 +7,8 @@ def crc_add_bytes(CRC, byte_array):
     CRC = CRC & 0xFF  # Ensure CRC is treated as uint8
     for byte in byte_array:
         for bit_num in range(8, 0, -1):
-            thisBit = not (0 == ((byte & (1 << (bit_num - 1))) == 0))
-            doInvert = thisBit != ((CRC & 128) >> 7) == 1
+            thisBit = (byte >> (bit_num - 1)) & 1 
+            doInvert = (thisBit ^ ((CRC & 128) >> 7)) == 1
             CRC = (CRC << 1) & 0xFF  # Ensure the result is treated as uint8
             if doInvert:
                 CRC = CRC ^ 7
@@ -32,7 +32,7 @@ def request_aurora_packet(
     # Add port handle string characters
     for probe_sn in probe_sn_array:
         payload_insert = bytearray([0x00, 0x00, 0x00, 0x00])
-        this_porthandle_string = probe_sn.encode()
+        this_porthandle_string = bytearray(probe_sn, 'utf-8')
         assert (
             len(this_porthandle_string) == 2
         ), "Port handle string length must be 2!"
@@ -50,7 +50,7 @@ def request_aurora_packet(
         if byte == DLE_BYTE:  # handle DLE stuffing
             msg.append(DLE_BYTE)
     msg.extend([DLE_BYTE, ETX_BYTE])
-
+    
     # Write message
     serial_port.write(msg)
 
