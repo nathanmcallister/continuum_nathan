@@ -15,11 +15,8 @@ aurora = serial.Serial("/dev/ttyUSB0", 115200, bytesize=serial.EIGHTBITS, parity
 probe_list = ['0A', '0B']
 continuum_aurora.request_aurora_packet(aurora, probe_list)
 pkt = continuum_aurora.get_aurora_packet(aurora, 1)
+print(continuum_aurora.get_aurora_transforms(pkt))
 
-with open("bytestr.txt", 'wb') as file:
-    file.write(pkt)
-
-file.close()
 
 arduino.close()
 aurora.close()

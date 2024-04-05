@@ -1,6 +1,7 @@
 import time
 import serial
-from typing import List
+import struct
+from typing import List, Dict
 
 
 def crc_add_bytes(CRC, byte_array):
@@ -123,3 +124,51 @@ def get_aurora_packet(serial_port, timeout):
         print("Serial read timeout!")
 
     return pkt
+
+
+def unstuff_dle(pkt: bytearray) -> bytearray:
+    DLE = 0x10
+    output = b""
+
+    dle_flag = False
+    for i in range(len(pkt)):
+        if pkt[i] == DLE:
+            if not dle_flag:
+                dle_flag = True
+            else:
+                dle_flag = False
+                output += int.to_bytes(pkt[i], 1, 'little')
+        else:
+            if dle_flag:
+                output += int.to_bytes(pkt[i-1], 1, 'little')
+                dle_flag = False
+            output += int.to_bytes(pkt[i], 1, 'little')
+
+    return output
+
+
+def get_aurora_transforms(pkt: bytearray) -> Dict[str, List[float]]:
+    
+    # Get rid of stuffed DLE's
+    pkt = unstuff_dle(pkt)
+
+    # Ensure we got a transform (can add error handling later)
+    assert pkt[2] == 0x01
+
+    # Parse data packet
+    num_transforms = pkt[3]
+    frame = int.from_bytes(pkt[4:8], 'little')
+    transform_dict = {}
+
+    # Go through all tools and get transform data
+    for i in range(num_transforms):
+        data_bytes = pkt[8+36*i:8+36*(i+1)+1]
+        tool_id = data_bytes[0:2].decode("utf-8")
+        transform_data = [0.0]*8
+        for j in range(8):
+            transform_data_bytes = data_bytes[4+4*j:4+4*(j+1)]
+            transform_data[j] = struct.unpack('f', transform_data_bytes)[0]
+
+        transform_dict[tool_id] = transform_data
+
+    return transform_dict
