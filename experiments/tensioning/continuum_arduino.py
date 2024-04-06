@@ -1,10 +1,15 @@
 import serial
 import struct
 import math
+import time
 from typing import List
 
 
-def write_motor_vals(motor_vals: List[int], device: serial.Serial) -> bool:
+def init_arduino():
+    return serial.Serial("/dev/ttyACM0", 115200, timeout=1)
+
+
+def write_motor_vals(device: serial.Serial, motor_vals: List[int], error_delay: float = 0.5) -> bool:
     # Important bytes for transmission
     DLE = 0x10
     STX = 0x02
@@ -26,7 +31,19 @@ def write_motor_vals(motor_vals: List[int], device: serial.Serial) -> bool:
     packet.extend(struct.pack("B", 2 * num_motors))
     for val in motor_vals:
         packed_val = struct.pack("H", val)
-        packet.extend(packed_val)
+
+        dle_idx = packed_val.find(DLE)
+        # DLE in bytes, stuff it
+        if dle_idx == 0:
+            packet.append(DLE)
+            packet.extend(packed_val)
+        elif dle_idx == 1:
+            packed.extend(packed_val)
+            packet.append(DLE)
+        # No DLE in bytes
+        else:
+            packet.extend(packed_val)
+
     packet.append(DLE)
     packet.append(ETX)
 
@@ -43,23 +60,27 @@ def write_motor_vals(motor_vals: List[int], device: serial.Serial) -> bool:
                 success = True
             elif output[4] == ERR:
                 print("ERR received")
+                time.sleep(error_delay)
                 errors += 1
             else:
                 print("Neither ACK or ERR received")
+                time.sleep(error_delay)
                 errors += 1
 
         else:
             if len(output) == 0:
                 print("Timeout")
+                time.sleep(error_delay)
                 errors += 1
             else:
                 print("Transmission error, received incorrect length response")
+                time.sleep(error_delay)
                 errors += 1
 
     return success
 
 
-def one_seg_dl_2_motor_values(dls: List[float], setpoints: List[int]) -> List[int]:
+def one_seg_dl_2_motor_vals(dls: List[float], setpoints: List[int]) -> List[int]:
 
     assert len(dls) == len(setpoints) == 4
 
