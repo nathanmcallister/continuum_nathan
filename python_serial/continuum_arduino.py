@@ -59,9 +59,7 @@ def write_motor_vals(motor_vals: List[int], device: serial.Serial) -> bool:
     return success
 
 
-def one_seg_dl_2_motor_values(
-    dls: List[float], setpoints: List[int]
-) -> List[int]:
+def one_seg_dl_2_motor_values(dls: List[float], setpoints: List[int]) -> List[int]:
 
     assert len(dls) == len(setpoints) == 4
 
@@ -72,3 +70,9 @@ def one_seg_dl_2_motor_values(
     l_2_cmd = -(servo_max - servo_min) / (math.pi * wheel_radius)
 
     return [int(setpoints[i] + dls[i] * l_2_cmd) for i in range(4)]
+
+
+def load_motor_setpoints(filename: str = "../tools/motor_setpoints") -> List[int]:
+    file = open(filename, "r")
+    values = file.readline()
+    return [int(x) for x in values.split(",")]
