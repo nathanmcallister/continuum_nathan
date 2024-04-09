@@ -6,6 +6,14 @@ import continuum_arduino
 import continuum_aurora
 import kinematics
 
+""" Tensioning
+Cameron Wolfe 04/06/24
+
+Tensions cables via incrementally tensioning them, and measuring displacement
+from starting position.  If displacement exceeds a threshold, then the cables
+are considered tensioned.  Repeats for each cable.
+"""
+
 # Parameters
 distance_threshold = 1  # mm - Movement level to consider a cable "tightened"
 max_delta = 15  # mm - Cannot pull a cable more than 15 mm from its starting length
