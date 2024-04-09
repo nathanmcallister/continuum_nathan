@@ -3,6 +3,14 @@ from math import sin, cos, pi
 from typing import List, Tuple
 
 
+def mike_2_webster_params(
+    segment_length: float, theta: float, phi: float
+) -> Tuple[float, ...]:
+    kappa = theta / segment_length
+
+    return (segment_length, kappa, phi)
+
+
 def dh_param_2_transform(param: Tuple[float, ...]) -> np.ndarray:
     assert len(param) == 4
     theta = param[0]
@@ -50,9 +58,7 @@ def get_dh_params(param_tuple: Tuple[float, ...]) -> List[Tuple[float, ...]]:
     return [(0, l, 0, 0)]
 
 
-def calculate_transform(
-    robot_params: List[Tuple[float, ...]]
-) -> List[np.ndarray]:
+def calculate_transform(robot_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
     T = np.eye(4, dtype=float)
 
     segment_transforms = []

@@ -119,8 +119,6 @@ def get_aurora_packet(serial_port, timeout):
                     i += 1
                 i += 1
 
-            # Here you would parse `message` as per your protocol
-
             # Remove the processed message from buffer
             new_serial_data = new_serial_data[end_idx + 2 :]
             pkt = message  # Placeholder, replace with actual parsing result
@@ -185,17 +183,25 @@ def parse_aurora_transforms(pkt: bytearray) -> Dict[str, List[float]]:
 
 
 def get_aurora_transforms(
-    serial_port: serial.Serial, probe_list: List[str], timeout: float = 1
+    serial_port: serial.Serial,
+    probe_list: List[str],
+    timeout: float = 1,
+    attempts: int = 5,
 ) -> Dict[str, List[float]]:
     output = {}
-    while not output:
+    counter = 0
+    while not output and counter < attempts:
         request_aurora_packet(serial_port, probe_list)
         pkt = get_aurora_packet(serial_port, timeout)
-        output = parse_aurora_transforms(pkt)
+        if pkt:
+            output = parse_aurora_transforms(pkt)
+        serial_port.flush()
+        counter += 1
+
     return output
 
 
-def aurora_transform_2_T(aurora_transform: List[float]) -> np.ndarray:
+def _aurora_transform_2_T(aurora_transform: List[float]) -> np.ndarray:
     T = np.identity(4)
 
     q = np.array(aurora_transform[0:4])
@@ -214,8 +220,6 @@ def get_T_tip_2_model(
     T_aurora_2_model: np.ndarray,
     T_tip_2_coil: np.ndarray,
 ) -> np.ndarray:
-    T_coil_2_aurora = aurora_transform_2_T(aurora_transform)
+    T_coil_2_aurora = _aurora_transform_2_T(aurora_transform)
 
     return np.matmul(T_aurora_2_model, np.matmul(T_coil_2_aurora, T_tip_2_coil))
-
-

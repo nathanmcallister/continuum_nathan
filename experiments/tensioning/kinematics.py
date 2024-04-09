@@ -101,18 +101,7 @@ def tang_2_dcm(tang: np.ndarray) -> np.ndarray:
     assert len(tang) == 3
     return expm(skew(tang))
 
+
 def dcm_2_tang(dcm: np.ndarray) -> np.ndarray:
     tang_skew = logm(dcm)
     return np.array([-tang_skew[1, 2], tang_skew[0, 2], -tang_skew[0, 1]])
-
-
-bingo = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]], dtype=float)
-bingo_a = dcm_2_tang(bingo)
-bingo_b = tang_2_dcm(bingo_a)
-bongo = np.array([1, 2, 3], dtype=float)
-bongo_a = tang_2_dcm(bongo)
-bongo_b = dcm_2_tang(bongo_a)
-
-print(bingo, bingo_a, bingo_b)
-print(skew(bongo))
-print(bongo, bongo_a, det(bongo_a), bongo_b)

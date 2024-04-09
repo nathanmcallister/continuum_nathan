@@ -50,9 +50,7 @@ def multi_seg_forward_kinematics(
     assert len(pos_as) == len(pos_bs) == len(segment_lengths), "num segments"
 
     if other_cable_positions:
-        assert len(segment_lengths) == len(
-            other_cable_positions
-        ), "num segments"
+        assert len(segment_lengths) == len(other_cable_positions), "num segments"
     cumulative_delta_la = 0
     cumulative_delta_lb = 0
     segment_params = []
@@ -86,30 +84,6 @@ def one_seg_inverse_kinematics(
     theta = seg_len * kappa
 
     return [
-        -(cable_positions[i][0] * cos(phi) + cable_positions[i][1] * sin(phi))
-        * theta
+        -(cable_positions[i][0] * cos(phi) + cable_positions[i][1] * sin(phi)) * theta
         for i in range(len(cable_positions))
     ]
-
-
-l = 64
-d = 4
-theta = pi/4
-phi = 0.0
-cable_positions = [(d, 0), (0, d), (-d, 0), (0, -d)]
-
-print((l, theta/l, phi))
-
-boop = one_seg_inverse_kinematics((l, theta / l, phi), cable_positions)
-
-print(boop)
-
-shoop = one_seg_forward_kinematics(
-    boop[0],
-    boop[1],
-    cable_positions[0],
-    cable_positions[1],
-    l,
-    cable_positions[2:],
-)
-print(shoop)
