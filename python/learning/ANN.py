@@ -174,7 +174,7 @@ class Dataset(Dataset):
             date_list = date_line.split(":")
             assert date_list[0] == "DATE"
 
-            self.date = tuple([int(x) for x in date_list[1].split("_")])
+            self.date = tuple([int(x) for x in date_list[1].split("-")])
 
             time_line = file.readline()
             time_list = time_line.split(":")
@@ -210,7 +210,7 @@ class Dataset(Dataset):
                 if dof == 5:
                     num_outputs += 5
                 else:
-                    num_outputs += 7
+                    num_outputs += 6
 
             while line := file.readline():
                 row = line.split(",")
@@ -226,7 +226,6 @@ class Dataset(Dataset):
                         dtype=float,
                     )
                 )
-            print(self.inputs, self.outputs)
 
             assert (
                 len(self.inputs) == len(self.outputs) == self.num_measurements
@@ -240,6 +239,3 @@ class Dataset(Dataset):
 
     def save(self, filename: str = "dataset_out.txt"):
         raise NotImplementedError
-
-
-bingo = Dataset("test_file.dat")

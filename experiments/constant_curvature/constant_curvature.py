@@ -4,8 +4,8 @@ import serial
 import time
 import continuum_arduino
 import continuum_aurora
-import constant_curvature_utils
-import mike_constant_curvature
+import utils_cc
+import mike_cc
 import kinematics
 
 """ Constant Curvature
@@ -22,13 +22,13 @@ samples_per_position = 5
 transform_attempts = 5
 theta_steps = 12
 phi_steps = 24
-rest_delay = 1
+rest_delay = 3
 
 zero_meas_filename = "zero.csv"
 meas_filename = "meas.csv"
 
 thetas = np.linspace(np.pi / (2 * theta_steps), np.pi / 2, theta_steps)
-phis = np.linspace(-np.pi / 2, 3 * np.pi / 2 - 2 * np.pi / phi_steps, phi_steps)
+phis = np.linspace(-np.pi , np.pi - 2 * np.pi / phi_steps, phi_steps)
 
 # Load tools and setpoints
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
@@ -86,18 +86,18 @@ print(T_start)
 # Main data collection loop
 for i in range(theta_steps):
     theta = thetas[i]
-    print("theta:", np.rad2deg(theta))
+    print("theta: {:.2f}".format(np.rad2deg(theta)))
     for j in range(phi_steps):
         sample = i * phi_steps + j
         phi = phis[j]
 
-        print("phi:", np.rad2deg(phi))
+        print("phi: {:.2f}".format(np.rad2deg(phi)))
 
         # Convert mike CC params (l, theta, phi) to webster CC params (l, kappa, phi)
-        seg_params = constant_curvature_utils.mike_2_webster_params(64, theta, phi)
+        seg_params = utils_cc.mike_2_webster_params(64, theta, phi)
 
         # Using CC model, get cable displacements
-        dls = mike_constant_curvature.one_seg_inverse_kinematics(
+        dls = mike_cc.one_seg_inverse_kinematics(
             seg_params, cable_positions
         )
 

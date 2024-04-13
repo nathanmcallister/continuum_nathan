@@ -194,7 +194,10 @@ def get_aurora_transforms(
         request_aurora_packet(serial_port, probe_list)
         pkt = get_aurora_packet(serial_port, timeout)
         if pkt:
-            output = parse_aurora_transforms(pkt)
+            try:
+                output = parse_aurora_transforms(pkt)
+            except:
+                print("Error with packet parsing, requesting another")
         serial_port.flush()
         counter += 1
 
