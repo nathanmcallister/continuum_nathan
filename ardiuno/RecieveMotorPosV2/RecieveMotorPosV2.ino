@@ -306,15 +306,21 @@ data_t* parse_serial_data(int end_of_packet) {
 }
 
 void move_motors(data_t* data) {
-
+    
     // Go through data packet
+    uint16_t motor_commands[NUM_SERVOS];
     for (int i = 0; i < NUM_SERVOS; i++) {
+        motor_commands[i] = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
+    }
 
-        // Convert 2 little-endian uint8_t's to one uint16_t
-        uint16_t motor_command = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
-        
+    for (int i = 0; i < NUM_SERVOS; i += 2) {
         // Send to pwm chip
-        pwm.setPWM(i, 0, motor_command);
+        pwm.setPWM(i, 0, motor_commands[i]);
+    }
+
+    for (int i = 1; i < NUM_SERVOS; i += 2) {
+        // Send to pwm chip
+        pwm.setPWM(i, 0, motor_commands[i]);
     }
 }
 
