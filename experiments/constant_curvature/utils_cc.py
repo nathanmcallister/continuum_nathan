@@ -4,20 +4,41 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 
 
+def webster_2_camarillo_params(
+    webster_params: List[Tuple[float, float, float]],
+    initial_segment_lengths: List[float],
+) -> np.ndarray:
+    assert len(webster_params) == len(initial_segment_lengths)
+    camarillo_params = np.zeros(3 * len(webster_params))
+
+    for index, values in enumerate(zip(webster_params, initial_segment_lengths)):
+        l, kappa, phi = values[0]
+        seg_length = values[1]
+        kappa_x = kappa * cos(phi)
+        kappa_y = kappa * sin(phi)
+        strain = l / seg_length - 1
+
+        camarillo_params[3 * index] = kappa_x
+        camarillo_params[3 * index + 1] = kappa_y
+        camarillo_params[3 * index + 2] = strain
+
+    return camarillo_params.reshape((-1, 1))
+
+
 def camarillo_2_webster_params(
-    q_segment: Tuple[float, ...], segment_lengths: List[float]
+    camarillo_params: np.ndarray, segment_lengths: List[float]
 ) -> List[Tuple[float, ...]]:
-    assert len(q_segment) % 3 == 0
-    num_segments = int(len(q_segment) / 3)
+    assert len(camarillo_params) % 3 == 0
+    num_segments = int(len(camarillo_params) / 3)
     assert num_segments == len(segment_lengths)
 
     webster_params = []
 
     for i in range(num_segments):
 
-        kappa_x = q_segment[3 * i].item()
-        kappa_y = q_segment[3 * i + 1].item()
-        axial_strain = q_segment[3 * i + 2].item()
+        kappa_x = camarillo_params[3 * i].item()
+        kappa_y = camarillo_params[3 * i + 1].item()
+        axial_strain = camarillo_params[3 * i + 2].item()
         kappa = sqrt(kappa_x**2 + kappa_y**2)
         phi = atan2(kappa_y, kappa_x)
 

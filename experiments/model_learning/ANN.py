@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from collections import OrderedDict
 from typing import List, Tuple
 import numpy as np
+import utils_data
 
 
 class Model(nn.Module):
@@ -13,6 +14,7 @@ class Model(nn.Module):
         input_dim: int,
         output_dim: int,
         hidden_layers: List[int],
+        loss=nn.MSELoss(),
         activation=nn.ReLU(),
         output_activation=None,
         lr: float = 1e-3,
@@ -25,9 +27,7 @@ class Model(nn.Module):
         self.device = (
             "cuda"
             if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
+            else "mps" if torch.backends.mps.is_available() else "cpu"
         )
         print(f"Using {self.device} device")
 
@@ -62,7 +62,7 @@ class Model(nn.Module):
 
         self.model = self.model.to(self.device)
 
-        self.loss = nn.MSELoss()
+        self.loss = loss
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
     # Must send x to self.device
@@ -87,7 +87,7 @@ class Model(nn.Module):
 
             train_loss += loss.item()
 
-            if batch % 100 == 0:
+            if batch % 64 == 0:
                 current_loss, current = loss.item(), (batch + 1) * len(X)
                 print(
                     f"Loss: {current_loss:>7f} [{current:>5d}/{size:>5d}]",
@@ -126,9 +126,7 @@ class Model(nn.Module):
         test_loss = []
 
         for epoch in range(num_epochs):
-            print(
-                f"Epoch {epoch+1}\n-------------------------------", flush=True
-            )
+            print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
             train_loss.append(self.train_epoch(train_dataloader))
 
             if test_dataloader:
@@ -155,21 +153,49 @@ class Model(nn.Module):
 
 
 class Dataset(Dataset):
-    def __init__(self, input_file_name: str):
-        self.input_file_name = input_file_name
+    def __init__(self, filename: str = None):
         self.date = None
         self.time = None
         self.num_cables = None
         self.num_auroras = None
-        self.aurora_dofs = None
 
         self.inputs = []
         self.outputs = []
 
-        self._parse_file()
+        if filename:
+            self._parse_file(filename)
 
-    def _parse_file(self):
-        with open(self.input_file_name, "r") as file:
+    def load_from_file(filename: str):
+        data = utils_data.load_file(filename)
+        self.load_from_DataContainer(data)
+
+    def load_from_DataContainer(self, data: utils_data.DataContainer):
+        self.date = data.date
+        self.time = data.time
+        self.num_cables = data.num_cables
+        self.num_auroras = data.num_auroras
+
+        self.inputs = data.inputs
+        self.outputs = data.outputs
+
+    def from_raw(
+        self,
+        date: Tuple[int, int, int],
+        time: Tuple[int, int, int],
+        num_cables: int,
+        num_auroras: int,
+        inputs: List[np.ndarray],
+        outputs: List[np.ndarray],
+    ):
+        self.date = date
+        self.time = time
+        self.num_cables = num_cables
+        self.num_auroras = num_auroras
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def _parse_file(self, filename: str):
+        with open(filename, "r") as file:
             date_line = file.readline()
             date_list = date_line.split(":")
             assert date_list[0] == "DATE"
@@ -188,13 +214,6 @@ class Dataset(Dataset):
             num_auroras_line = file.readline()
             num_auroras_list = num_auroras_line.split(":")
             self.num_auroras = int(num_auroras_list[1])
-
-            aurora_dofs_line = file.readline()
-            aurora_dofs_list = aurora_dofs_line.split(":")
-            assert aurora_dofs_list[0] == "AURORA_DOFS"
-
-            self.aurora_dofs = [int(x) for x in aurora_dofs_list[1].split(",")]
-            assert self.num_auroras == len(self.aurora_dofs)
 
             num_measurements_line = file.readline()
             num_measurements_list = num_measurements_line.split(":")
@@ -216,20 +235,18 @@ class Dataset(Dataset):
                 row = line.split(",")
                 self.inputs.append(
                     np.array(
-                        [float(x) for x in row[1: self.num_cables + 1]],
+                        [float(x) for x in row[1 : self.num_cables + 1]],
                         dtype=float,
                     )
                 )
                 self.outputs.append(
                     np.array(
-                        [float(x) for x in row[self.num_cables + 1:]],
+                        [float(x) for x in row[self.num_cables + 1 :]],
                         dtype=float,
                     )
                 )
 
-            assert (
-                len(self.inputs) == len(self.outputs) == self.num_measurements
-            )
+            assert len(self.inputs) == len(self.outputs) == self.num_measurements
 
     def __len__(self):
         return len(self.inputs)
@@ -239,3 +256,15 @@ class Dataset(Dataset):
 
     def save(self, filename: str = "dataset_out.txt"):
         raise NotImplementedError
+
+
+class PoseLoss(nn.Module):
+    def __init__(self, scale=10, num_coils=1):
+        super(PoseLoss, self).__init__()
+        self.num_coils = 1
+        self.weights = torch.from_numpy(np.concatenate((np.ones(3 * num_coils), scale * np.ones(3 * num_coils))))
+
+    def forward(self, input, target):
+        expanded_weights = self.weights.expand(input.size(0), -1)
+
+        return nn.functional.mse_loss(input * expanded_weights, target * expanded_weights)
