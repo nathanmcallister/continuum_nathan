@@ -23,7 +23,7 @@ def base_circle() -> np.ndarray:
     circle_df = pd.read_table(AURORA_CIRCLE_FILE, sep=',', header=None)
     num_probes = len(pd.unique(circle_df[2]))
 
-    penprobe_index = "0B"
+    penprobe_index = "0A"
     pen_table = circle_df[:][circle_df[2] == penprobe_index]
 
     pen_quat = pen_table.iloc[:, 3:7].to_numpy().transpose()
@@ -40,17 +40,38 @@ def base_circle() -> np.ndarray:
     assert not ((tip_pos_in_aurora == np.inf).any() or (tip_pos_in_aurora == np.nan).any())
 
     tip_pos_in_model = kinematics.Tmult(T_aurora_2_model, tip_pos_in_aurora)
+    
+    radius = 18
 
-    ax = plt.figure().add_subplot(projection='3d')
-    ax.scatter(tip_pos_in_model[0, :], tip_pos_in_model[1, :], tip_pos_in_model[2, :])
+    def minimization_func(x):
+        delta = tip_pos_in_model[0:2, :] - x.reshape((2, 1))
+        r = np.sqrt(np.sum(delta ** 2, axis=0))
+        return np.sum((r - radius)**2)
+    
+    x0 = np.zeros(2)
+    out = opt.minimize(minimization_func, x0, method="nelder-mead")
+    center = out['x']
+
+    theta = np.linspace(0, 2 * np.pi, 100)
+    circle_x = radius * np.cos(theta) + center[0]
+    circle_y = radius * np.sin(theta) + center[1]
+
+    plt.scatter(center[0], center[1])
+    plt.plot(circle_x, circle_y)
+    plt.scatter(tip_pos_in_model[0, :], tip_pos_in_model[1, :])
+    ax = plt.gca()
+    ax.set_aspect("equal")
+
     plt.show()
+
+    return center
 
 
 def base_top() -> float:
     top_df = pd.read_table(AURORA_TOP_FILE, sep=',', header=None)
     num_probes = len(pd.unique(top_df[2]))
 
-    penprobe_index = "0B"
+    penprobe_index = "0A"
     pen_table = top_df[:][top_df[2] == penprobe_index]
 
     pen_quat = pen_table.iloc[:, 3:7].to_numpy().transpose()
@@ -67,13 +88,14 @@ def base_top() -> float:
     assert not ((tip_pos_in_aurora == np.inf).any() or (tip_pos_in_aurora == np.nan).any())
 
     tip_pos_in_model = kinematics.Tmult(T_aurora_2_model, tip_pos_in_aurora)
+    
+    return tip_pos_in_model[2, :].mean()
 
-    ax = plt.figure().add_subplot(projection='3d')
-    ax.scatter(tip_pos_in_model[0, :], tip_pos_in_model[1, :], tip_pos_in_model[2, :])
-    plt.show()
+xy = base_circle()
+z = base_top()
 
-    plt.plot(tip_pos_in_model[2, :])
-    plt.show()
+out = np.zeros(3)
+out[0:2] = xy
+out[2] = z
 
-base_circle()
-base_top()
+np.savetxt("../../tools/spine_pos", out, delimiter=",")
