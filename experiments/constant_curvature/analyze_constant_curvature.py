@@ -4,17 +4,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import utils_cc
 
-meas_data = np.loadtxt("meas.csv", delimiter=",")
-zero_data = np.loadtxt("zero.csv", delimiter=",")
+# Load data
+meas_data = np.loadtxt("output/meas_04_21_24a.csv", delimiter=",")
+zero_data = np.loadtxt("output/zero_04_21_24a.csv", delimiter=",")
 
-print(meas_data[433:435:,9])
-print(meas_data[433:435,10])
-
-print(np.argwhere(np.abs(meas_data[:, 9]) > 100))
-print(np.argwhere(np.abs(meas_data[:, 10]) > 100))
+# Get rid of faulty measurements
 
 phi_meas = np.arctan2(meas_data[:, 10] - zero_data[0:5, 3].mean(), meas_data[:, 9] - zero_data[0:5, 2].mean())
-print(phi_meas[0:10])
 
 desired_pos = np.zeros((meas_data.shape[0], 3))
 

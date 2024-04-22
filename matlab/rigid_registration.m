@@ -17,11 +17,15 @@
 %  - T_tip_2_coil: (4x4 double) tip to coil frame transformation matrix
 %  - rmse: (struct) Contains RMS error for various transformations
 
-function [T_aurora_2_model, T_tip_2_coil, T_tip_2_model, rmse] = rigid_registration(REG_FILE, PEN_FILE, output_files)
+function [T_aurora_2_model, T_tip_2_coil, T_tip_2_model, rmse] = rigid_registration(REG_FILE, PEN_FILE, output_files, repetitions)
 
 %% Input parsing
 if nargin == 2
     output_files = false;
+    repetitions = 1;
+end
+if nargin == 3
+    repetitions = 1;
 end
 
 %% Setup
@@ -48,6 +52,22 @@ reg_table = readtable(REG_FILE);
 %% Get truth registration positions
 model_reg_truth_in_model = T_mult(T_sw_2_model, model_reg_truth_in_sw);
 tip_reg_truth_in_tip = T_mult(T_sw_2_tip, tip_reg_truth_in_sw);
+
+% If multiple repetitions of a point are collected, use all of them in reg
+temp_model = zeros(3, length(model_reg_truth_in_model) * repetitions);
+temp_tip = zeros(3, length(tip_reg_truth_in_tip) * repetitions);
+
+for i=1:repetitions
+    for j=1:length(model_reg_truth_in_model)
+        temp_model(:, (j - 1) * repetitions + i) = model_reg_truth_in_model(:, j);
+    end
+    for j=1:length(tip_reg_truth_in_tip)
+        temp_tip(:, (j - 1) * repetitions + i) = tip_reg_truth_in_tip(:, j);
+    end
+end
+
+model_reg_truth_in_model = temp_model;
+tip_reg_truth_in_tip = temp_tip;
 
 %% Extracting and processing aurora data
 pen_mat = table2array(reg_table(strcmp('0A', reg_table{:, 3}), 4:10));
@@ -77,7 +97,9 @@ rmse.coil_2_aurora = sqrt(mean((tip_mat(:,5:end) - mean_tip_pos).^2, 'all'));
 
 %% Final transforms
 T_tip_2_coil = T_coil_2_aurora^-1 * T_aurora_2_tip^-1;
+rmse.tip_2_coil_est = sqrt(rmse.coil_2_aurora^2 + rmse.aurora_2_tip^2);
 T_tip_2_model = T_aurora_2_model * T_coil_2_aurora * T_tip_2_coil
+rmse.tip_2_model_est = sqrt(rmse.aurora_2_model^2 + rmse.coil_2_aurora^2 + rmse.tip_2_coil_est^2);
 
 T_tip_2_model_truth = T_sw_2_model * T_sw_2_tip^-1
 

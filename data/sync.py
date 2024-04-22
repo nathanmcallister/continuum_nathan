@@ -25,11 +25,13 @@ connection = pysftp.Connection(
 connection.chdir("github/tracker-serial-interface")
 connection.get_r("regs", ".sftp_temp")
 connection.get_r("tip_cals", ".sftp_temp")
+connection.get_r("base_positions", ".sftp_temp")
 
 connection.close()
 
 shutil.copytree(".sftp_temp/regs", "regs", dirs_exist_ok=True)
 shutil.copytree(".sftp_temp/tip_cals", "tip_cals", dirs_exist_ok=True)
+shutil.copytree(".sftp_temp/base_positions", "base_positions", dirs_exist_ok=True)
 
 shutil.rmtree(".sftp_temp")
 

@@ -18,14 +18,15 @@ are considered tensioned.  Repeats for each cable.
 distance_threshold = 1  # mm - Movement level to consider a cable "tightened"
 max_delta = 15  # mm - Cannot pull a cable more than 15 mm from its starting length
 step_size = 0.1 # mm - How many mm we pull the cable each step
+num_motors = 4
+servo_min = 80
+servo_max = 530
 
 # Load tools and setpoints
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
 
-motor_setpoints = continuum_arduino.load_motor_setpoints(
-    "../../tools/motor_setpoints"
-)  # Delta length = 0 positions
+motor_setpoints = [int((servo_min + servo_max) / 2)] * num_motors
 
 # Assuming that both pen and probe are plugged in, but it will work if just the probe is plugged in
 probe_list = ["0A", "0B"]
@@ -93,7 +94,9 @@ for i in range(4):
         # Get distance between old and current tip position
         dist = np.linalg.norm(T_new_tip_2_starting_tip[0:3, 3])
         displacements[i, meas_counter] = dist
-        print(i, deltas, ":", dist)
+
+        print_deltas = [f"{x:.2f}" for x in deltas]
+        print(f"{i} [" + ", ".join(print_deltas) + f"] : {dist:.5f}")
 
         # Either the robot cable is tensioned, or something is fishy
         if dist > distance_threshold or abs(deltas[i]) > max_delta:

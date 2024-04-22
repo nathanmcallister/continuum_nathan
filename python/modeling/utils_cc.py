@@ -103,13 +103,14 @@ def get_dh_params(param_tuple: Tuple[float, ...]) -> List[Tuple[float, ...]]:
     return [(0, l, 0, 0)]
 
 
-def calculate_transform(robot_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
+def calculate_transforms(robot_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
     T = np.eye(4, dtype=float)
-
+    print(robot_params)
     segment_transforms = []
 
     for robot_param_tuple in robot_params:
         dh_params = get_dh_params(robot_param_tuple)
+        print(dh_params)
 
         for dh_param in dh_params:
             new_T = dh_param_2_transform(dh_param)
@@ -119,6 +120,18 @@ def calculate_transform(robot_params: List[Tuple[float, ...]]) -> List[np.ndarra
 
     return segment_transforms
 
+
+def calculate_transform(robot_params: Tuple[float, ...]) -> np.ndarray:
+
+    T = np.eye(4, dtype=float)
+
+    dh_params = get_dh_params(robot_params)
+
+    for dh_param in dh_params:
+        new_T = dh_param_2_transform(dh_param)
+        T = np.matmul(T, new_T)
+
+    return T
 
 def plot_robot(
     robot_params: List[Tuple[float, ...]], points_per_segment: float = 32
@@ -140,8 +153,8 @@ def plot_robot(
 
         for i in range(points_per_segment):
             point_params = [(segment_sample_lengths[i], kappa, phi)]
-
-            T_point = calculate_transform(point_params)[0]
+            print(point_params)
+            T_point = calculate_transforms(point_params)[0]
 
             T_point_in_base = np.matmul(T_base, T_point)
 

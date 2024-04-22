@@ -13,8 +13,12 @@ class DataContainer:
     inputs: List[np.ndarray] = field(default_factory=list)
     outputs: List[np.ndarray] = field(default_factory=list)
     num_auroras: int = 1
+    prefix: str = "data"
 
-    def file_export(self, filename: str):
+    def file_export(self, filename: str = None):
+        if not filename:
+            filename = self.prefix + f"_{self.date[0]:02n}_{self.date[1]:02n}_{self.date[2]:02n}_{self.time[0]:02n}_{self.time[1]:02n}_{self.time[2]:02n}.dat"
+
         with open(filename, "w") as file:
             file.write(f"DATE: {self.date[0]}-{self.date[1]}-{self.date[2]}\n")
             file.write(f"TIME: {self.time[0]}-{self.time[1]}-{self.time[2]}\n")
@@ -120,6 +124,11 @@ class DataContainer:
             self.inputs.append(cable_deltas[:, i].flatten())
             self.outputs.append(np.concatenate([positions[:, i], orientations[:, i]], axis=0).flatten())
 
+    def set_date_and_time(self):
+        now = datetime.datetime.now()
+
+        self.date = (now.year, now.month, now.day)
+        self.time = (now.hour, now.minute, now.second)
 
 
 def get_header_str(num_cables: int, num_measurements: int, num_auroras: int = 1) -> str:

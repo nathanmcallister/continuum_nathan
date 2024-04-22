@@ -3,9 +3,9 @@
 
 // Serial definitions
 #define DLE 0x10
-#define STX 0x12
-#define ETX 0x13
-#define ACK 0x14
+#define STX 0x02
+#define ETX 0x03
+#define ACK 0x06
 #define ERR 0x15
 
 // Servo definitions

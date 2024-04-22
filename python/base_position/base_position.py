@@ -6,8 +6,8 @@ import scipy.optimize as opt
 import kinematics
 import continuum_aurora
 
-AURORA_CIRCLE_FILE = "../../data/base_circle_04_16_24a.csv"
-AURORA_TOP_FILE = "../../data/base_top_04_16_24a.csv"
+AURORA_CIRCLE_FILE = "../../data/base_positions/base_circle_04_22_24a.csv"
+AURORA_TOP_FILE = "../../data/base_positions/base_top_04_22_24a.csv"
 
 T_AURORA_2_MODEL_FILE = "../../tools/T_aurora_2_model"
 T_TIP_2_COIL_FILE = "../../tools/T_tip_2_coil"
@@ -38,6 +38,11 @@ def base_circle() -> np.ndarray:
         tip_pos_in_aurora[:, i] = pen_coil_pos[:, i] + np.matmul(dcm, penprobe)
 
     assert not ((tip_pos_in_aurora == np.inf).any() or (tip_pos_in_aurora == np.nan).any())
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(tip_pos_in_aurora[0,:], tip_pos_in_aurora[1, :], tip_pos_in_aurora[2, :])
+    plt.show()
 
     tip_pos_in_model = kinematics.Tmult(T_aurora_2_model, tip_pos_in_aurora)
     
@@ -83,11 +88,20 @@ def base_top() -> float:
 
     for i in range(num_meas):
         dcm = kinematics.quat_2_dcm(pen_quat[:, i])
+        print(np.linalg.det(dcm))
         tip_pos_in_aurora[:, i] = pen_coil_pos[:, i] + np.matmul(dcm, penprobe)
 
     assert not ((tip_pos_in_aurora == np.inf).any() or (tip_pos_in_aurora == np.nan).any())
 
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(tip_pos_in_aurora[0,:], tip_pos_in_aurora[1, :], tip_pos_in_aurora[2, :])
+    plt.show()
+
     tip_pos_in_model = kinematics.Tmult(T_aurora_2_model, tip_pos_in_aurora)
+    plt.figure(2)
+    plt.plot(tip_pos_in_model[2,:])
+    plt.show()
     
     return tip_pos_in_model[2, :].mean()
 
