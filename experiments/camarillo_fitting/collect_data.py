@@ -9,7 +9,7 @@ import camarillo_cc
 import utils_cc
 import kinematics
 
-cable_positions = [(8, 0), (0, 8), (-8, 0), (0, -8)]
+cable_positions = [(4, 0), (0, 4), (-4, 0), (0, -4)]
 theta_steps = 24
 samples_per_position = 5
 num_positions = theta_steps * 4

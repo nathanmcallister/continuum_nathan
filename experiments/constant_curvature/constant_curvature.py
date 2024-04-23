@@ -25,12 +25,13 @@ theta_steps = 12
 phi_steps = 24
 rest_delay = 0.5
 num_motors = 4
+sweep_phi = True
 
 num_measurements = theta_steps * phi_steps * samples_per_position
 num_zero_measurements = num_measurements + samples_per_position
 
 thetas = np.linspace(np.pi / (2 * theta_steps), np.pi / 2, theta_steps)
-phis = np.linspace(-np.pi , np.pi - 2 * np.pi / phi_steps, phi_steps)
+phis = np.linspace(-np.pi, np.pi - 2 * np.pi / phi_steps, phi_steps)
 
 # Load tools and setpoints
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
@@ -96,50 +97,34 @@ T_start[0:3, 3] = starting_position
 # Print out starting transform to make sure everything looks alright
 print(T_start)
 
-# Main data collection loop
-for i in range(phi_steps):
-    phi = phis[i]
-    print("phi: {:.2f}".format(np.rad2deg(phi)))
-    for j in range(theta_steps):
-        theta = thetas[j]
+if sweep_phi:
+    # Main data collection loop
+    for i in range(theta_steps):
+        theta = thetas[i]
         print("theta: {:.2f}".format(np.rad2deg(theta)))
-        sample = i * theta_steps + j
+        for j in range(phi_steps):
+            phi = phis[j]
+            print("phi: {:.2f}".format(np.rad2deg(phi)))
+            sample = i * phi_steps + j
 
-        # Convert mike CC params (l, theta, phi) to webster CC params (l, kappa, phi)
-        seg_params = utils_cc.mike_2_webster_params(64, theta, phi)
+            # Convert mike CC params (l, theta, phi) to webster CC params (l, kappa, phi)
+            seg_params = utils_cc.mike_2_webster_params(64, theta, phi)
 
-        # Using CC model, get cable displacements
-        dls = mike_cc.one_seg_inverse_kinematics(
-            seg_params, cable_positions
-        )
+            # Using CC model, get cable displacements
+            dls = mike_cc.one_seg_inverse_kinematics(seg_params, cable_positions)
 
-        # Convert cable displacements to motor commands
-        motor_vals = continuum_arduino.one_seg_dl_2_motor_vals(dls, motor_setpoints)
+            # Convert cable displacements to motor commands
+            motor_vals = continuum_arduino.one_seg_dl_2_motor_vals(dls, motor_setpoints)
 
-        # Write commands to motor and wait to get there
-        time.sleep(rest_delay)
-        continuum_arduino.write_motor_vals(arduino, motor_vals)
-        time.sleep(rest_delay)
+            # Write commands to motor and wait to get there
+            time.sleep(rest_delay)
+            continuum_arduino.write_motor_vals(arduino, motor_vals)
+            time.sleep(rest_delay)
 
-        # Sample tip state using
-        for k in range(samples_per_position):
-            meas = sample * samples_per_position + k
+            # Sample tip state using
+            for k in range(samples_per_position):
+                meas = sample * samples_per_position + k
 
-            aurora_transform = {}
-            counter = 0
-            while not aurora_transform and counter < transform_attempts:
-                aurora_transform = continuum_aurora.get_aurora_transforms(
-                    aurora, probe_list
-                )
-                counter += 1
-
-            # Convert raw aurora data to transformation matrix
-            try:
-                T = continuum_aurora.get_T_tip_2_model(
-                    aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
-                )
-
-            except:
                 aurora_transform = {}
                 counter = 0
                 while not aurora_transform and counter < transform_attempts:
@@ -148,44 +133,44 @@ for i in range(phi_steps):
                     )
                     counter += 1
 
-                T = continuum_aurora.get_T_tip_2_model(
-                    aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
-                )
+                # Convert raw aurora data to transformation matrix
+                try:
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
 
+                except:
+                    aurora_transform = {}
+                    counter = 0
+                    while not aurora_transform and counter < transform_attempts:
+                        aurora_transform = continuum_aurora.get_aurora_transforms(
+                            aurora, probe_list
+                        )
+                        counter += 1
 
-            pos = T[0:3, 3]
-            tang = kinematics.dcm_2_tang(T[0:3, 0:3])
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
 
-            # Store data
-            meas_cable_deltas[:, meas] = np.array(dls)
-            meas_pos[:, meas] = pos
-            meas_tang[:, meas] = tang
+                pos = T[0:3, 3]
+                tang = kinematics.dcm_2_tang(T[0:3, 0:3])
 
-        # Return to (0,0) point
-        time.sleep(rest_delay)
-        continuum_arduino.write_motor_vals(arduino, motor_setpoints)
-        time.sleep(3*rest_delay)
+                # Store data
+                meas_cable_deltas[:, meas] = np.array(dls)
+                meas_pos[:, meas] = pos
+                meas_tang[:, meas] = tang
 
-        # Get measurements of (0,0) state
-        sample += 1
-        for k in range(samples_per_position):
-            meas = sample * samples_per_position + k
+            # Return to (0,0) point
+            time.sleep(rest_delay)
+            continuum_arduino.write_motor_vals(arduino, motor_setpoints)
+            time.sleep(3 * rest_delay)
 
-            # Get data from aurora
-            aurora_transform = {}
-            counter = 0
-            while not aurora_transform and counter < transform_attempts:
-                aurora_transform = continuum_aurora.get_aurora_transforms(
-                    aurora, probe_list
-                )
-                counter += 1
+            # Get measurements of (0,0) state
+            sample += 1
+            for k in range(samples_per_position):
+                meas = sample * samples_per_position + k
 
-            # Convert raw aurora data to transformation matrix
-            try:
-                T = continuum_aurora.get_T_tip_2_model(
-                    aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
-                )
-            except:
+                # Get data from aurora
                 aurora_transform = {}
                 counter = 0
                 while not aurora_transform and counter < transform_attempts:
@@ -193,20 +178,155 @@ for i in range(phi_steps):
                         aurora, probe_list
                     )
                     counter += 1
-                T = continuum_aurora.get_T_tip_2_model(
-                    aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
-                )
 
-            pos = T[0:3, 3]
-            tang = kinematics.dcm_2_tang(T[0:3, 0:3])
+                # Convert raw aurora data to transformation matrix
+                try:
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
+                except:
+                    aurora_transform = {}
+                    counter = 0
+                    while not aurora_transform and counter < transform_attempts:
+                        aurora_transform = continuum_aurora.get_aurora_transforms(
+                            aurora, probe_list
+                        )
+                        counter += 1
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
 
-            # Store data
-            zero_pos[:, meas] = pos
-            zero_tang[:, meas] = tang
+                pos = T[0:3, 3]
+                tang = kinematics.dcm_2_tang(T[0:3, 0:3])
+
+                # Store data
+                zero_pos[:, meas] = pos
+                zero_tang[:, meas] = tang
+else:
+    # Main data collection loop
+    for i in range(phi_steps):
+        phi = phis[i]
+        print("phi: {:.2f}".format(np.rad2deg(phi)))
+        for j in range(theta_steps):
+            theta = thetas[j]
+            print("theta: {:.2f}".format(np.rad2deg(theta)))
+            sample = i * theta_steps + j
+
+            # Convert mike CC params (l, theta, phi) to webster CC params (l, kappa, phi)
+            seg_params = utils_cc.mike_2_webster_params(64, theta, phi)
+
+            # Using CC model, get cable displacements
+            dls = mike_cc.one_seg_inverse_kinematics(seg_params, cable_positions)
+
+            # Convert cable displacements to motor commands
+            motor_vals = continuum_arduino.one_seg_dl_2_motor_vals(dls, motor_setpoints)
+
+            # Write commands to motor and wait to get there
+            time.sleep(rest_delay)
+            continuum_arduino.write_motor_vals(arduino, motor_vals)
+            time.sleep(rest_delay)
+
+            # Sample tip state using
+            for k in range(samples_per_position):
+                meas = sample * samples_per_position + k
+
+                aurora_transform = {}
+                counter = 0
+                while not aurora_transform and counter < transform_attempts:
+                    aurora_transform = continuum_aurora.get_aurora_transforms(
+                        aurora, probe_list
+                    )
+                    counter += 1
+
+                # Convert raw aurora data to transformation matrix
+                try:
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
+
+                except:
+                    aurora_transform = {}
+                    counter = 0
+                    while not aurora_transform and counter < transform_attempts:
+                        aurora_transform = continuum_aurora.get_aurora_transforms(
+                            aurora, probe_list
+                        )
+                        counter += 1
+
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
+
+                pos = T[0:3, 3]
+                tang = kinematics.dcm_2_tang(T[0:3, 0:3])
+
+                # Store data
+                meas_cable_deltas[:, meas] = np.array(dls)
+                meas_pos[:, meas] = pos
+                meas_tang[:, meas] = tang
+
+            # Return to (0,0) point
+            time.sleep(rest_delay)
+            continuum_arduino.write_motor_vals(arduino, motor_setpoints)
+            time.sleep(3 * rest_delay)
+
+            # Get measurements of (0,0) state
+            sample += 1
+            for k in range(samples_per_position):
+                meas = sample * samples_per_position + k
+
+                # Get data from aurora
+                aurora_transform = {}
+                counter = 0
+                while not aurora_transform and counter < transform_attempts:
+                    aurora_transform = continuum_aurora.get_aurora_transforms(
+                        aurora, probe_list
+                    )
+                    counter += 1
+
+                # Convert raw aurora data to transformation matrix
+                try:
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
+                except:
+                    aurora_transform = {}
+                    counter = 0
+                    while not aurora_transform and counter < transform_attempts:
+                        aurora_transform = continuum_aurora.get_aurora_transforms(
+                            aurora, probe_list
+                        )
+                        counter += 1
+                    T = continuum_aurora.get_T_tip_2_model(
+                        aurora_transform["0A"], T_aurora_2_model, T_tip_2_coil
+                    )
+
+                pos = T[0:3, 3]
+                tang = kinematics.dcm_2_tang(T[0:3, 0:3])
+
+                # Store data
+                zero_pos[:, meas] = pos
+                zero_tang[:, meas] = tang
 
 # Fill data containers
-zero_container.from_raw_data(zero_container.date, zero_container.time, num_motors, num_zero_measurements, zero_cable_deltas, zero_pos, zero_tang)
-meas_container.from_raw_data(meas_container.date, meas_container.time, num_motors, num_measurements, meas_cable_deltas, meas_pos, meas_tang)
+zero_container.from_raw_data(
+    zero_container.date,
+    zero_container.time,
+    num_motors,
+    num_zero_measurements,
+    zero_cable_deltas,
+    zero_pos,
+    zero_tang,
+)
+meas_container.from_raw_data(
+    meas_container.date,
+    meas_container.time,
+    num_motors,
+    num_measurements,
+    meas_cable_deltas,
+    meas_pos,
+    meas_tang,
+)
 
 # Write data
 zero_container.file_export()
