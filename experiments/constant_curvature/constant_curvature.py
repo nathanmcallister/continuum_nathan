@@ -41,7 +41,7 @@ motor_setpoints = continuum_arduino.load_motor_setpoints(
 )  # Delta length = 0 positions
 
 # Setup cable positions
-cable_positions = [(8, 0), (0, 8), (-8, 0), (0, -8)]
+cable_positions = [(4, 0), (0, 4), (-4, 0), (0, -4)]
 
 # Initialize Aurora and Arduino
 aurora = continuum_aurora.init_aurora()
