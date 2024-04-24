@@ -48,13 +48,15 @@ while meas_counter < num_measurements:
     current_time = time.perf_counter_ns()
 
     if (current_time - prev_time) * ns2s >= sample_period:
-        transforms = continuum_aurora.get_aurora_transforms(aurora, probe_list, 0.25, 1)
-        T = continuum_aurora.get_T_tip_2_model(
-            transforms[coil_port], T_aurora_2_model, T_tip_2_coil
-        )
+        try:
+            transforms = continuum_aurora.get_aurora_transforms(aurora, probe_list, 0.25, 1)
+            T = continuum_aurora.get_T_tip_2_model(transforms[coil_port], T_aurora_2_model, T_tip_2_coil)
 
-        pos[:, meas_counter] = T[0:3, 3]
-        tang[:, meas_counter] = kinematics.dcm_2_tang(T[0:3, 0:3])
+            pos[:, meas_counter] = T[0:3, 3]
+            tang[:, meas_counter] = kinematics.dcm_2_tang(T[0:3, 0:3])
+        except:
+            pos[:, meas_counter] = np.nan * np.zeros(3)
+            tang[:, meas_counter] = np.nan * np.zeros(3)
 
         motor_vals = continuum_arduino.one_seg_dl_2_motor_vals(
             motor_dls[:, meas_counter + 1].tolist(), motor_setpoints
