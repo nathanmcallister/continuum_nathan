@@ -1,7 +1,8 @@
 import datetime
 import numpy as np
+import pandas as pd
 from dataclasses import dataclass, field
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 
 @dataclass
@@ -17,7 +18,10 @@ class DataContainer:
 
     def file_export(self, filename: str = None):
         if not filename:
-            filename = self.prefix + f"_{self.date[0]:02n}_{self.date[1]:02n}_{self.date[2]:02n}_{self.time[0]:02n}_{self.time[1]:02n}_{self.time[2]:02n}.dat"
+            filename = (
+                self.prefix
+                + f"_{self.date[0]:02n}_{self.date[1]:02n}_{self.date[2]:02n}_{self.time[0]:02n}_{self.time[1]:02n}_{self.time[2]:02n}.dat"
+            )
 
         with open(filename, "w") as file:
             file.write(f"DATE: {self.date[0]}-{self.date[1]}-{self.date[2]}\n")
@@ -32,9 +36,7 @@ class DataContainer:
                 file.write(f"{counter},")
 
                 for input_val in input:
-                    file.write(
-                        f"{input_val},"
-                    )
+                    file.write(f"{input_val},")
 
                 for output_val in output:
                     if output_val != output[-1]:
@@ -104,9 +106,9 @@ class DataContainer:
         orientations: np.ndarray,
         num_auroras: int = 1,
     ):
-        assert (cable_deltas.shape == (num_cables, num_measurements))
-        assert (positions.shape == (3 * num_auroras, num_measurements))
-        assert (orientations.shape == (3 * num_auroras, num_measurements))
+        assert cable_deltas.shape == (num_cables, num_measurements)
+        assert positions.shape == (3 * num_auroras, num_measurements)
+        assert orientations.shape == (3 * num_auroras, num_measurements)
 
         self.date = date
         self.time = time
@@ -122,7 +124,9 @@ class DataContainer:
 
         for i in range(num_measurements):
             self.inputs.append(cable_deltas[:, i].flatten())
-            self.outputs.append(np.concatenate([positions[:, i], orientations[:, i]], axis=0).flatten())
+            self.outputs.append(
+                np.concatenate([positions[:, i], orientations[:, i]], axis=0).flatten()
+            )
 
     def set_date_and_time(self):
         now = datetime.datetime.now()
@@ -131,113 +135,23 @@ class DataContainer:
         self.time = (now.hour, now.minute, now.second)
 
 
-def get_header_str(num_cables: int, num_measurements: int, num_auroras: int = 1) -> str:
-    now = datetime.datetime.now()
-    date_str = "DATE: " + now.strftime("%Y-%m-%d") + "\n"
-    time_str = "TIME: " + now.strftime("%H:%M:%S") + "\n"
-    num_cables_str = "NUM_CABLES: " + str(num_cables) + "\n"
-    num_auroras_str = "NUM_AURORAS: 1" + "\n"
-    num_measurements_str = "NUM_MEASUREMENTS: " + str(num_measurements) + "\n"
-
-    return (
-        date_str
-        + time_str
-        + num_cables_str
-        + num_auroras_str
-        + aurora_dofs_str
-        + num_measurements_str
-        + "---\n"
-    )
-
-
-def export_file(
-    header_str: str,
-    cable_deltas: np.ndarray,
-    positions: np.ndarray,
-    orientations: np.ndarray,
+def parse_aurora_csv(
     filename: str,
-) -> None:
+) -> Dict[str, List[Tuple[np.ndarray, np.ndarray, float]]]:
 
-    with open(filename, "w") as file:
-        file.write(header_str)
+    df = pd.read_csv(filename, header=None)
 
-        for i in range(positions.shape[1]):
-            file.write(str(i) + ",")
-            for delta in cable_deltas[:, i]:
-                file.write(str(delta) + ",")
-            for pos in positions[:, i]:
-                file.write(str(pos) + ",")
-            for tang in orientations[:, i]:
-                if tang != orientations[2, i]:
-                    file.write(str(tang) + ",")
-                else:
-                    file.write(str(tang))
+    probes = pd.unique(df.iloc[:, 2])
 
-            file.write("\n")
+    output = {}
+    for probe in probes:
+        output[probe] = []
+        probe_df = df[df[2] == probe]
+        qs = np.transpose(probe_df.iloc[:, 3:7].to_numpy())
+        ts = np.transpose(probe_df.iloc[:, 7:10].to_numpy())
+        rms = probe_df.iloc[:, 13].to_numpy()
 
+        for i in range(qs.shape[1]):
+            output[probe].append((qs[:, i].reshape((4, 1)), ts[:, i].reshape((3, 1)), rms[i].item()))
 
-def load_file(filename: str) -> np.ndarray:
-
-    with open(file_name, "r") as file:
-        date_line = file.readline()
-        date_list = date_line.split(":")
-        assert date_list[0] == "DATE"
-
-        date = tuple([int(x) for x in date_list[1].split("-")])
-
-        time_line = file.readline()
-        time_list = time_line.split(":")
-        assert time_list[0] == "TIME"
-
-        time = tuple([int(x) for x in time_list[1:]])
-
-        num_cables_line = file.readline()
-        num_cables = int(num_cables_line.split(":")[1])
-
-        num_auroras_line = file.readline()
-        num_auroras_list = num_auroras_line.split(":")
-        num_auroras = int(num_auroras_list[1])
-
-        aurora_dofs_line = file.readline()
-        aurora_dofs_list = aurora_dofs_line.split(":")
-        aurora_dofs_list[0] == "AURORA_DOFS"
-
-        aurora_dofs = [int(x) for x in aurora_dofs_list[1].split(",")]
-        assert num_auroras == len(aurora_dofs)
-
-        num_measurements_line = file.readline()
-        num_measurements_list = num_measurements_line.split(":")
-        assert num_measurements_list[0] == "NUM_MEASUREMENTS"
-
-        num_measurements = int(num_measurements_list[1])
-
-        spacer = file.readline()
-        assert spacer.strip() == "---"
-
-        num_outputs = 0
-        for dof in aurora_dofs:
-            if dof == 5:
-                num_outputs += 5
-            else:
-                num_outputs += 6
-
-        inputs = []
-        outputs = []
-        while line := file.readline():
-            row = line.split(",")
-            inputs.append(
-                np.array(
-                    [float(x) for x in row[1 : num_cables + 1]],
-                    dtype=float,
-                )
-            )
-            outputs.append(
-                np.array(
-                    [float(x) for x in row[num_cables + 1 :]],
-                    dtype=float,
-                )
-            )
-
-        assert len(inputs) == len(outputs) == num_measurements
-
-    return DataContainer(date, time, num_cables, num_measurements, inputs, outputs)
+    return output

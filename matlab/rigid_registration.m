@@ -76,7 +76,8 @@ tip_mat = table2array(reg_table(strcmp('0B', reg_table{:, 3}), 4:10));
 % Use penprobe to get pen tip position
 pen_positions = nan(3, size(pen_mat,1));
 for i=1:size(pen_mat, 1)
-    pen_positions(:, i) = (pen_mat(i, 5:7) + quatrotate(pen_mat(i, 1:4), penprobe))';
+    R = quat2matrix(pen_mat(i, 1:4));
+    pen_positions(:, i) = pen_mat(i, 5:7)' + R * penprobe';
 end
 
 % Split into model registration points and tip registration points
@@ -86,17 +87,21 @@ tip_reg_meas_in_aurora = pen_positions(:, size(model_reg_truth_in_model, 2)+1:en
 %% SVD rigid registrations
 [~, T_aurora_2_model, rmse.aurora_2_model] = rigid_align_svd(model_reg_meas_in_aurora, model_reg_truth_in_model);
 
+T_aurora_2_model
+
 [~, T_aurora_2_tip, rmse.aurora_2_tip] = rigid_align_svd(tip_reg_meas_in_aurora, tip_reg_truth_in_tip);
+
+T_aurora_2_tip
 
 %% Coil to Aurora registration
 mean_tip_quat = quat_mean(tip_mat(:,1:4));
 mean_tip_pos = mean(tip_mat(:, 5:end));
 
-T_coil_2_aurora = [[quat2dcm(mean_tip_quat), mean_tip_pos']; [0 0 0 1]];
+T_coil_2_aurora = [[quat2matrix(mean_tip_quat), mean_tip_pos']; [0 0 0 1]]
 rmse.coil_2_aurora = sqrt(mean((tip_mat(:,5:end) - mean_tip_pos).^2, 'all'));
 
 %% Final transforms
-T_tip_2_coil = T_coil_2_aurora^-1 * T_aurora_2_tip^-1;
+T_tip_2_coil = T_coil_2_aurora^-1 * T_aurora_2_tip^-1
 rmse.tip_2_coil_est = sqrt(rmse.coil_2_aurora^2 + rmse.aurora_2_tip^2);
 T_tip_2_model = T_aurora_2_model * T_coil_2_aurora * T_tip_2_coil
 rmse.tip_2_model_est = sqrt(rmse.aurora_2_model^2 + rmse.coil_2_aurora^2 + rmse.tip_2_coil_est^2);
