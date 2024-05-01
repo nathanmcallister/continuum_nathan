@@ -61,7 +61,7 @@ def generate_random_data(
             camarillo_params, segment_lengths
         )
 
-        T_list = utils_cc.calculate_transform(webster_params)
+        T_list = utils_cc.calculate_transforms(webster_params)
 
         positions[:, i] = T_list[1][0:3, 3]
         orientations[:, i] = kinematics.dcm_2_tang(T_list[1][0:3, 0:3])
@@ -84,7 +84,7 @@ segment_lengths = [64, 64]
 #    segment_stiffness_vals,
 #    cable_stiffness_vals,
 #    segment_lengths,
-#    2**16,
+#    2**14,
 #)
 
 #container.file_export("cc_data.dat")
@@ -100,7 +100,7 @@ train_dataloader = DataLoader(split_datasets[0], batch_size=64)
 test_dataloader = DataLoader(split_datasets[1], batch_size=64)
 
 model = ANN.Model(8, 6, [32, 32], loss=ANN.PoseLoss())
-train_loss, test_loss = model.train(train_dataloader, test_dataloader, num_epochs=100)
+train_loss, test_loss = model.train(train_dataloader, test_dataloader, checkpoints=True)
 
 train_loss_array = np.array(train_loss)
 test_loss_array = np.array(test_loss)

@@ -5,6 +5,8 @@ from torch.utils.data import Dataset
 from collections import OrderedDict
 from typing import List, Tuple
 import numpy as np
+import os
+import datetime
 import utils_data
 
 
@@ -119,11 +121,30 @@ class Model(nn.Module):
         self,
         train_dataloader: DataLoader,
         test_dataloader: DataLoader = None,
-        num_epochs: int = 10,
+        num_epochs: int = 300,
         model_save_path: str = None,
+        checkpoints: bool = False,
     ) -> Tuple[List[float], ...]:
         train_loss = []
         test_loss = []
+
+        if checkpoints:
+            now = datetime.datetime.now()
+
+
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            
+            checkpoints_dir = os.path.join(dir_path, "checkpoints/")
+
+            if not os.path.exists(checkpoints_dir):
+                os.mkdir(checkpoints_dir)
+
+            checkpoints_path = f"{now.year}_{now.month}_{now.day}_{now.hour}_{now.minute}_{now.second}/"
+
+            checkpoints_path = os.path.join(checkpoints_dir, checkpoints_path)
+
+            if not os.path.exists(checkpoints_path):
+                os.mkdir(checkpoints_path)
 
         for epoch in range(num_epochs):
             print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
@@ -131,6 +152,16 @@ class Model(nn.Module):
 
             if test_dataloader:
                 test_loss.append(self.test_epoch(test_dataloader))
+
+            if checkpoints:
+                file_path = checkpoints_path + f"epoch_{epoch+1}.pt"
+                torch.save({
+                    "epoch": epoch+1,
+                    "validation_loss": test_loss[-1],
+                    "model_state_dict": self.model.state_dict(),
+                    "optim_state_dict": self.optimizer.state_dict(),
+                }, file_path)
+
 
         if model_save_path:
             self.save(model_save_path)
@@ -261,7 +292,7 @@ class Dataset(Dataset):
 class PoseLoss(nn.Module):
     def __init__(self, scale=10, num_coils=1):
         super(PoseLoss, self).__init__()
-        self.num_coils = 1
+        self.num_coils = num_coils
         self.weights = torch.from_numpy(np.concatenate((np.ones(3 * num_coils), scale * np.ones(3 * num_coils))))
 
     def forward(self, input, target):
