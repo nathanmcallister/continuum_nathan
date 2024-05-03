@@ -134,6 +134,14 @@ class DataContainer:
         self.date = (now.year, now.month, now.day)
         self.time = (now.hour, now.minute, now.second)
 
+    def to_numpy(self):
+        cable_deltas = np.concatenate([x.reshape((-1, 1)) for x in self.inputs], axis=1)
+
+        pos = np.concatenate([x[:3].reshape((-1, 1)) for x in self.outputs], axis=1)
+        tang = np.concatenate([x[3:].reshape((-1, 1)) for x in self.outputs], axis=1)
+
+        return cable_deltas, pos, tang
+
 
 def parse_aurora_csv(
     filename: str,

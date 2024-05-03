@@ -121,7 +121,7 @@ class Model(nn.Module):
         self,
         train_dataloader: DataLoader,
         test_dataloader: DataLoader = None,
-        num_epochs: int = 300,
+        num_epochs: int = 512,
         model_save_path: str = None,
         checkpoints: bool = False,
     ) -> Tuple[List[float], ...]:
@@ -131,7 +131,6 @@ class Model(nn.Module):
         if checkpoints:
             now = datetime.datetime.now()
 
-
             dir_path = os.path.dirname(os.path.realpath(__file__))
             
             checkpoints_dir = os.path.join(dir_path, "checkpoints/")
@@ -139,7 +138,7 @@ class Model(nn.Module):
             if not os.path.exists(checkpoints_dir):
                 os.mkdir(checkpoints_dir)
 
-            checkpoints_path = f"{now.year}_{now.month}_{now.day}_{now.hour}_{now.minute}_{now.second}/"
+            checkpoints_path = f"{now.year}_{now.month:02n}_{now.day:02n}_{now.hour:02n}_{now.minute:02n}_{now.second:02n}/"
 
             checkpoints_path = os.path.join(checkpoints_dir, checkpoints_path)
 
@@ -154,7 +153,7 @@ class Model(nn.Module):
                 test_loss.append(self.test_epoch(test_dataloader))
 
             if checkpoints:
-                file_path = checkpoints_path + f"epoch_{epoch+1}.pt"
+                file_path = os.path.join(checkpoints_path + f"epoch_{epoch+1}.pt")
                 torch.save({
                     "epoch": epoch+1,
                     "validation_loss": test_loss[-1],
@@ -162,9 +161,16 @@ class Model(nn.Module):
                     "optim_state_dict": self.optimizer.state_dict(),
                 }, file_path)
 
+        if checkpoints:
+            min_val_loss = min(enumerate(test_loss), key=lambda x: x[1])
+            epoch = min_val_loss[0] + 1
 
-        if model_save_path:
-            self.save(model_save_path)
+            checkpoint = torch.load(checkpoints_path + f"epoch_{epoch}.pt")
+            assert checkpoint["epoch"] == epoch and checkpoint["validation_loss"] == min_val_loss[1]
+
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+            print(f"Epoch with lowest validation loss (epoch {epoch}) loaded into model")
+            self.model.eval()
 
         if test_dataloader:
             return train_loss, test_loss

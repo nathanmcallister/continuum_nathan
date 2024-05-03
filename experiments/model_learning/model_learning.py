@@ -13,97 +13,94 @@ import utils_cc
 import utils_data
 import kinematics
 
+# Input filenames
+clean_one_seg_filename = "output/clean_1_seg_2024_05_02_12_23_30.dat"
+noisy_one_seg_filename = "output/noisy_1_seg_2024_05_02_12_23_30.dat"
+clean_two_seg_filename = "output/clean_2_seg_2024_05_02_12_24_08.dat"
+noisy_two_seg_filename = "output/noisy_2_seg_2024_05_02_12_24_08.dat"
 
-def generate_random_data(
-    cable_positions: List[Tuple[float, ...]],
-    segment_stiffness_vals: List[Tuple[float, ...]],
-    cable_stiffness_vals: List[Tuple[float, ...]],
-    segment_lengths: List[float],
-    num_measurements: int = 2048,
-    file_name: str = "cc_data.dat",
-    cable_std: float = 7.5,
-    noise_std: float = 0.0,
-) -> utils_data.DataContainer:
-    num_cables = sum([len(x) for x in cable_positions])
-    num_segments = len(segment_lengths)
+# Data loading
+# Clean one seg
+clean_container_one_seg = utils_data.DataContainer()
+clean_container_one_seg.file_import(clean_one_seg_filename)
+clean_dataset_one_seg = ANN.Dataset()
+clean_dataset_one_seg.load_from_DataContainer(clean_container_one_seg)
 
-    now = datetime.datetime.now()
-    date = (now.year, now.month, now.day)
-    time = (now.hour, now.minute, now.second)
+# Noisy one seg
+noisy_container_one_seg = utils_data.DataContainer()
+noisy_container_one_seg.file_import(noisy_one_seg_filename)
+noisy_dataset_one_seg = ANN.Dataset()
+noisy_dataset_one_seg.load_from_DataContainer(noisy_container_one_seg)
 
-    cable_deltas = np.zeros((num_cables, num_measurements))
-    positions = np.zeros((3, num_measurements))
-    orientations = np.zeros((3, num_measurements))
+# Clean two seg
+clean_container_two_seg = utils_data.DataContainer()
+clean_container_two_seg.file_import(clean_two_seg_filename)
+clean_dataset_two_seg = ANN.Dataset()
+clean_dataset_two_seg.load_from_DataContainer(clean_container_two_seg)
 
-    for i in range(num_measurements):
-        rand_deltas = cable_std * np.random.standard_normal(num_cables)
-        cable_deltas[:, i] = rand_deltas
+# Noisy two seg
+noisy_container_two_seg = utils_data.DataContainer()
+noisy_container_two_seg.file_import(noisy_two_seg_filename)
+noisy_dataset_two_seg = ANN.Dataset()
+noisy_dataset_two_seg.load_from_DataContainer(noisy_container_two_seg)
 
-        dls = []
-        previous_cables = 0
-        for s in range(num_segments):
-            cables_in_segment = len(cable_positions[s])
-            dls.append(
-                tuple(
-                    rand_deltas[previous_cables : previous_cables + cables_in_segment]
-                )
-            )
-            previous_cables += cables_in_segment
+# Training
+# Clean one seg
+split_datasets = torch.utils.data.random_split(clean_dataset_one_seg, [0.75, 0.25])
+clean_train_dataloader_one_seg = DataLoader(split_datasets[0], batch_size=64)
+clean_validation_dataloader_one_seg = DataLoader(split_datasets[1], batch_size=64)
 
-        camarillo_params = camarillo_cc.no_slack_model(
-            dls,
-            cable_positions,
-            segment_stiffness_vals,
-            cable_stiffness_vals,
-            segment_lengths,
-        )
-        webster_params = utils_cc.camarillo_2_webster_params(
-            camarillo_params, segment_lengths
-        )
+clean_model_one_seg = ANN.Model(4, 6, [32, 32], loss=ANN.PoseLoss())
+clean_train_loss_one_seg, clean_validation_loss_one_seg = clean_model_one_seg.train(clean_train_dataloader_one_seg, clean_validation_dataloader_one_seg, checkpoints=True)
 
-        T_list = utils_cc.calculate_transforms(webster_params)
 
-        positions[:, i] = T_list[1][0:3, 3]
-        orientations[:, i] = kinematics.dcm_2_tang(T_list[1][0:3, 0:3])
+# Noisy one seg
+split_datasets = torch.utils.data.random_split(noisy_dataset_one_seg, [0.75, 0.25])
+noisy_train_dataloader_one_seg = DataLoader(split_datasets[0], batch_size=64)
+noisy_validation_dataloader_one_seg = DataLoader(split_datasets[1], batch_size=64)
 
-    container = utils_data.DataContainer()
-    container.from_raw_data(date, time, num_cables, num_measurements, cable_deltas, positions, orientations)
-    return container
+noisy_model_one_seg = ANN.Model(4, 6, [32, 32], loss=ANN.PoseLoss())
+noisy_train_loss_one_seg, noisy_validation_loss_one_seg = noisy_model_one_seg.train(noisy_train_dataloader_one_seg, noisy_validation_dataloader_one_seg, checkpoints=True)
 
-dls = [(-10, 0, 10, 0), (0, 0, 0, 0)]
-cable_positions = [
-    ((8, 0), (0, 8), (-8, 0), (0, -8)),
-    ((8, 0), (0, 8), (-8, 0), (0, -8)),
-]
-segment_stiffness_vals = [(458, 458), (458, 458)]
-cable_stiffness_vals = [(5540, 5540, 5540, 5540), (5540, 5540, 5540, 5540)]
-segment_lengths = [64, 64]
+# Clean two seg
+split_datasets = torch.utils.data.random_split(clean_dataset_two_seg, [0.75, 0.25])
+clean_train_dataloader_two_seg = DataLoader(split_datasets[0], batch_size=64)
+clean_validation_dataloader_two_seg = DataLoader(split_datasets[1], batch_size=64)
 
-#container = generate_random_data(
-#    cable_positions,
-#    segment_stiffness_vals,
-#    cable_stiffness_vals,
-#    segment_lengths,
-#    2**14,
-#)
+clean_model_two_seg = ANN.Model(8, 6, [32, 32], loss=ANN.PoseLoss())
+clean_train_loss_two_seg, clean_validation_loss_two_seg = clean_model_two_seg.train(clean_train_dataloader_two_seg, clean_validation_dataloader_two_seg, checkpoints=True)
 
-#container.file_export("cc_data.dat")
+# Noisy two seg
+split_datasets = torch.utils.data.random_split(noisy_dataset_two_seg, [0.75, 0.25])
+noisy_train_dataloader_two_seg = DataLoader(split_datasets[0], batch_size=64)
+noisy_validation_dataloader_two_seg = DataLoader(split_datasets[1], batch_size=64)
 
-container = utils_data.DataContainer()
-container.file_import("cc_data.dat")
+noisy_model_two_seg = ANN.Model(8, 6, [32, 32], loss=ANN.PoseLoss())
+noisy_train_loss_two_seg, noisy_validation_loss_two_seg = noisy_model_two_seg.train(noisy_train_dataloader_two_seg, noisy_validation_dataloader_two_seg, checkpoints=True)
 
-dataset = ANN.Dataset()
-dataset.load_from_DataContainer(container)
-split_datasets = torch.utils.data.random_split(dataset, [0.75, 0.25])
+# Loss data restructuring
+clean_train_loss_one_seg = np.array(clean_train_loss_one_seg)
+clean_validation_loss_one_seg = np.array(clean_validation_loss_one_seg)
 
-train_dataloader = DataLoader(split_datasets[0], batch_size=64)
-test_dataloader = DataLoader(split_datasets[1], batch_size=64)
+noisy_train_loss_one_seg = np.array(noisy_train_loss_one_seg)
+noisy_validation_loss_one_seg = np.array(noisy_validation_loss_one_seg)
 
-model = ANN.Model(8, 6, [32, 32], loss=ANN.PoseLoss())
-train_loss, test_loss = model.train(train_dataloader, test_dataloader, checkpoints=True)
+clean_train_loss_two_seg = np.array(clean_train_loss_two_seg)
+clean_validation_loss_two_seg = np.array(clean_validation_loss_two_seg)
 
-train_loss_array = np.array(train_loss)
-test_loss_array = np.array(test_loss)
+noisy_train_loss_two_seg = np.array(noisy_train_loss_two_seg)
+noisy_validation_loss_two_seg = np.array(noisy_validation_loss_two_seg)
 
-np.savetxt("train_loss.dat", train_loss_array, delimiter=",")
-np.savetxt("test_loss.dat", test_loss_array, delimiter=",")
+# Save loss as csv
+np.savetxt("clean_train_loss_one_seg.dat", clean_train_loss_one_seg, delimiter=",")
+np.savetxt("clean_validation_loss_one_seg.dat", clean_validation_loss_one_seg, delimiter=",")
+
+np.savetxt("noisy_train_loss_one_seg.dat", noisy_train_loss_one_seg, delimiter=",")
+np.savetxt("noisy_validation_loss_one_seg.dat", noisy_validation_loss_one_seg, delimiter=",")
+
+np.savetxt("clean_train_loss_two_seg.dat", clean_train_loss_two_seg, delimiter=",")
+np.savetxt("clean_validation_loss_two_seg.dat", clean_validation_loss_two_seg, delimiter=",")
+
+np.savetxt("noisy_train_loss_two_seg.dat", noisy_train_loss_two_seg, delimiter=",")
+np.savetxt("noisy_validation_loss_two_seg.dat", noisy_validation_loss_two_seg, delimiter=",")
+
