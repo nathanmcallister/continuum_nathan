@@ -16,22 +16,27 @@ class Model(nn.Module):
         input_dim: int,
         output_dim: int,
         hidden_layers: List[int],
-        loss=nn.MSELoss(),
-        activation=nn.ReLU(),
-        output_activation=None,
+        loss: nn.Module = nn.MSELoss(),
+        activation: nn.Module = nn.ReLU(),
+        output_activation: nn.Module = None,
         lr: float = 1e-3,
+        checkpoints_path: str = None,
+        save_path: str = None,
     ):
         super().__init__()
 
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-        self.device = (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps" if torch.backends.mps.is_available() else "cpu"
+        self.device = "cpu"
+        # self.device = (
+        #    "cuda"
+        #    if torch.cuda.is_available()
+        #    else "mps" if torch.backends.mps.is_available() else "cpu"
+        # )
+        print(
+            f"Using {self.device} device for model (this was set intentionally due to the sizes of the matrices used.  If this needs to be changed, go to line 30 of ANN.py"
         )
-        print(f"Using {self.device} device")
 
         self.model = nn.Sequential(
             OrderedDict(
@@ -66,6 +71,9 @@ class Model(nn.Module):
 
         self.loss = loss
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+
+        self.checkpoints_path = checkpoints_path
+        self.save_path = save_path
 
     # Must send x to self.device
     def forward(self, x):
@@ -117,13 +125,28 @@ class Model(nn.Module):
 
         return test_loss
 
+    def test_dataset(self, dataset: Dataset):
+        dataloader = DataLoader(dataset)
+
+        self.model.eval()
+        test_loss = []
+
+        with torch.no_grad():
+            for X, y in dataloader:
+                X, y = X.to(self.device), y.to(self.device)
+
+                pred = self.model(X)
+                test_loss.append(self.loss(pred, y).item())
+
+        return test_loss
+
     def train(
         self,
         train_dataloader: DataLoader,
         test_dataloader: DataLoader = None,
-        num_epochs: int = 512,
-        model_save_path: str = None,
+        num_epochs: int = 2048,
         checkpoints: bool = False,
+        save_model: bool = False,
     ) -> Tuple[List[float], ...]:
         train_loss = []
         test_loss = []
@@ -132,7 +155,7 @@ class Model(nn.Module):
             now = datetime.datetime.now()
 
             dir_path = os.path.dirname(os.path.realpath(__file__))
-            
+
             checkpoints_dir = os.path.join(dir_path, "checkpoints/")
 
             if not os.path.exists(checkpoints_dir):
@@ -154,33 +177,50 @@ class Model(nn.Module):
 
             if checkpoints:
                 file_path = os.path.join(checkpoints_path + f"epoch_{epoch+1}.pt")
-                torch.save({
-                    "epoch": epoch+1,
-                    "validation_loss": test_loss[-1],
-                    "model_state_dict": self.model.state_dict(),
-                    "optim_state_dict": self.optimizer.state_dict(),
-                }, file_path)
+                torch.save(
+                    {
+                        "epoch": epoch + 1,
+                        "validation_loss": test_loss[-1],
+                        "model_state_dict": self.model.state_dict(),
+                        "optim_state_dict": self.optimizer.state_dict(),
+                    },
+                    file_path,
+                )
 
         if checkpoints:
             min_val_loss = min(enumerate(test_loss), key=lambda x: x[1])
             epoch = min_val_loss[0] + 1
 
             checkpoint = torch.load(checkpoints_path + f"epoch_{epoch}.pt")
-            assert checkpoint["epoch"] == epoch and checkpoint["validation_loss"] == min_val_loss[1]
+            assert (
+                checkpoint["epoch"] == epoch
+                and checkpoint["validation_loss"] == min_val_loss[1]
+            )
 
             self.model.load_state_dict(checkpoint["model_state_dict"])
-            print(f"Epoch with lowest validation loss (epoch {epoch}) loaded into model")
+            print(
+                f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
+            )
             self.model.eval()
+
+            if save_model:
+                self.save()
 
         if test_dataloader:
             return train_loss, test_loss
 
         return train_loss, None
 
-    def save(self, model_save_path: str) -> None:
-        if not model_save_path.endswith(".pt"):
-            model_save_path += ".pt"
-        torch.save(self.model.state_dict(), model_save_path)
+    def save(self, model_save_path: str = None) -> None:
+        if model_save_path:
+            self.save_path = model_save_path
+
+        assert (
+            self.save_path
+        ), "No model save path specified in initialization or in save function"
+        if not self.save_path.endswith(".pt"):
+            self.save_path += ".pt"
+        torch.save(self.model.state_dict(), self.save_path)
 
     def load(self, model_load_path: str) -> None:
         if not model_load_path.endswith(".pt"):
@@ -196,14 +236,25 @@ class Dataset(Dataset):
         self.num_cables = None
         self.num_auroras = None
 
+        self.device = "cpu"
+        # self.device = (
+        #    "cuda"
+        #    if torch.cuda.is_available()
+        #    else "mps" if torch.backends.mps.is_available() else "cpu"
+        # )
+        print(
+            f"Using {self.device} device for dataset (this was set intentionally due to the sizes of the matrices used.  If this needs to be changed, go to line 200 of ANN.py"
+        )
+
         self.inputs = []
         self.outputs = []
 
         if filename:
             self._parse_file(filename)
 
-    def load_from_file(filename: str):
-        data = utils_data.load_file(filename)
+    def load_from_file(self, filename: str):
+        data = utils_data.DataContainer()
+        data.file_import(filename)
         self.load_from_DataContainer(data)
 
     def load_from_DataContainer(self, data: utils_data.DataContainer):
@@ -212,8 +263,10 @@ class Dataset(Dataset):
         self.num_cables = data.num_cables
         self.num_auroras = data.num_auroras
 
-        self.inputs = data.inputs
-        self.outputs = data.outputs
+        self.inputs = [torch.from_numpy(input).to(self.device) for input in data.inputs]
+        self.outputs = [
+            torch.from_numpy(output).to(self.device) for output in data.outputs
+        ]
 
     def from_raw(
         self,
@@ -271,17 +324,17 @@ class Dataset(Dataset):
             while line := file.readline():
                 row = line.split(",")
                 self.inputs.append(
-                    np.array(
+                    torch.tensor(
                         [float(x) for x in row[1 : self.num_cables + 1]],
                         dtype=float,
                     )
-                )
+                ).to(self.device)
                 self.outputs.append(
-                    np.array(
+                    torch.tensor(
                         [float(x) for x in row[self.num_cables + 1 :]],
                         dtype=float,
                     )
-                )
+                ).to(self.device)
 
             assert len(self.inputs) == len(self.outputs) == self.num_measurements
 
@@ -298,10 +351,40 @@ class Dataset(Dataset):
 class PoseLoss(nn.Module):
     def __init__(self, scale=10, num_coils=1):
         super(PoseLoss, self).__init__()
+
+        self.device = "cpu"
+        # self.device = (
+        #    "cuda"
+        #    if torch.cuda.is_available()
+        #    else "mps" if torch.backends.mps.is_available() else "cpu"
+        # )
+        print(
+            f"Using {self.device} device for PoseLoss (this was set intentionally due to the sizes of the matrices used.  If this needs to be changed, go to line 312 of ANN.py"
+        )
         self.num_coils = num_coils
-        self.weights = torch.from_numpy(np.concatenate((np.ones(3 * num_coils), scale * np.ones(3 * num_coils))))
+        self.weights = torch.from_numpy(
+            np.concatenate((np.ones(3 * num_coils), scale * np.ones(3 * num_coils)))
+        ).to(self.device)
 
     def forward(self, input, target):
         expanded_weights = self.weights.expand(input.size(0), -1)
 
-        return nn.functional.mse_loss(input * expanded_weights, target * expanded_weights)
+        return nn.functional.mse_loss(
+            input * expanded_weights, target * expanded_weights
+        )
+
+
+class PositionLoss(nn.Module):
+    def __init__(self):
+        super(PositionLoss, self).__init__()
+
+    def forward(self, input, target):
+        return nn.functional.mse_loss(input[:, :3], target[:, :3])
+
+
+class OrientationLoss(nn.Module):
+    def __init__(self):
+        super(OrientationLoss, self).__init__()
+
+    def forward(self, input, target):
+        return nn.functional.mse_loss(input[:, 3:], target[:, 3:])
