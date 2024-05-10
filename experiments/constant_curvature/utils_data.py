@@ -38,11 +38,11 @@ class DataContainer:
                 for input_val in input:
                     file.write(f"{input_val},")
 
-                for output_val in output:
-                    if output_val != output[-1]:
-                        file.write(f"{output_val},")
+                for i in range(len(output)):
+                    if i < len(output) - 1:
+                        file.write(f"{output[i]},")
                     else:
-                        file.write(f"{output_val}\n")
+                        file.write(f"{output[i]}\n")
 
                 counter += 1
 
@@ -160,6 +160,8 @@ def parse_aurora_csv(
         rms = probe_df.iloc[:, 13].to_numpy()
 
         for i in range(qs.shape[1]):
-            output[probe].append((qs[:, i].reshape((4, 1)), ts[:, i].reshape((3, 1)), rms[i].item()))
+            output[probe].append(
+                (qs[:, i].reshape((4, 1)), ts[:, i].reshape((3, 1)), rms[i].item())
+            )
 
     return output

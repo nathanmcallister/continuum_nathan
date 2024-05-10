@@ -25,7 +25,7 @@ theta_steps = 12
 phi_steps = 24
 rest_delay = 0.5
 num_motors = 4
-sweep_phi = True
+sweep_phi = False
 
 num_measurements = theta_steps * phi_steps * samples_per_position
 num_zero_measurements = num_measurements + samples_per_position

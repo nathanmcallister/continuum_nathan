@@ -9,7 +9,9 @@ def init_arduino():
     return serial.Serial("/dev/ttyACM0", 115200, timeout=1)
 
 
-def write_motor_vals(device: serial.Serial, motor_vals: List[int], error_delay: float = 0.5) -> bool:
+def write_motor_vals(
+    device: serial.Serial, motor_vals: List[int], error_delay: float = 0.5
+) -> bool:
     # Important bytes for transmission
     DLE = 0x10
     STX = 0x02
@@ -84,11 +86,11 @@ def one_seg_dl_2_motor_vals(dls: List[float], setpoints: List[int]) -> List[int]
 
     assert len(dls) == len(setpoints) == 4
 
-    servo_min = 80
-    servo_max = 530
+    servo_min = 1221
+    servo_max = 2813
     wheel_radius = 15
 
-    l_2_cmd = -(servo_max - servo_min) / (math.pi * wheel_radius)
+    l_2_cmd = (servo_max - servo_min) / (2 * math.pi / 3 * wheel_radius)
 
     return [int(setpoints[i] + dls[i] * l_2_cmd) for i in range(4)]
 

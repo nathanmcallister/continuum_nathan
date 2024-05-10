@@ -4,13 +4,13 @@ import continuum_arduino
 
 NUM_SEGMENTS = 1
 
-SERVO_MIN = 80;
-SERVO_MAX = 530;
-SERVO_MID = int((SERVO_MIN + SERVO_MAX)/2);
-TIGHTENING_FACTOR = 100
+SERVO_MIN = 1221
+SERVO_MAX = 2813
+SERVO_MID = int((SERVO_MAX + SERVO_MIN) / 2)
+TIGHTENING_FACTOR = 1500
 
 tight_motor_cmds = [SERVO_MID] * 4 * NUM_SEGMENTS
-loose_motor_cmds = [SERVO_MID - TIGHTENING_FACTOR] * 4 * NUM_SEGMENTS
+loose_motor_cmds = [SERVO_MID + TIGHTENING_FACTOR] * 4 * NUM_SEGMENTS
 
 arduino = continuum_arduino.init_arduino()
 
@@ -28,9 +28,9 @@ while state >= 0:
 
     i = input("Type s to switch state, e to exit: ")
 
-    if i == 's':
+    if i == "s":
         state += 1
-    elif i == 'e':
+    elif i == "e":
         state = -1
 
 arduino.close()

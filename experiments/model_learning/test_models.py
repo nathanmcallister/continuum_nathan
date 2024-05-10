@@ -26,8 +26,13 @@ noisy_one_seg_model_files = glob.glob("models/run_05_04_2024/*_noisy_one_seg.pt"
 clean_two_seg_model_files = glob.glob("models/run_05_04_2024/*_clean_two_seg.pt")
 noisy_two_seg_model_files = glob.glob("models/run_05_04_2024/*_noisy_two_seg.pt")
 
-one_seg_model = ANN.Model(input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss())
-two_seg_model = ANN.Model(input_dim=8, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss())
+one_seg_model = ANN.Model(
+    input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss()
+)
+two_seg_model = ANN.Model(
+    input_dim=8, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss()
+)
+
 
 def test(model, model_files, dataset):
 
@@ -42,21 +47,58 @@ def test(model, model_files, dataset):
         position_losses.append(np.array(model.test_dataset(dataset)).reshape((1, -1)))
         print(f"Model {counter} orientation")
         model.loss = ANN.OrientationLoss()
-        orientation_losses.append(np.array(model.test_dataset(dataset)).reshape((1, -1)))
+        orientation_losses.append(
+            np.array(model.test_dataset(dataset)).reshape((1, -1))
+        )
 
-    return np.concatenate(position_losses, axis=0), np.concatenate(orientation_losses, axis=0)
+    return np.concatenate(position_losses, axis=0), np.concatenate(
+        orientation_losses, axis=0
+    )
 
-clean_clean_one_seg_position_loss, clean_clean_one_seg_orientation_loss = test(one_seg_model, clean_one_seg_model_files, clean_one_seg_dataset)
-noisy_clean_one_seg_position_loss, noisy_clean_one_seg_orientation_loss = test(one_seg_model, noisy_one_seg_model_files, clean_one_seg_dataset)
-clean_clean_two_seg_position_loss, clean_clean_two_seg_orientation_loss = test(two_seg_model, clean_two_seg_model_files, clean_two_seg_dataset)
-noisy_clean_two_seg_position_loss, noisy_clean_two_seg_orientation_loss = test(two_seg_model, noisy_two_seg_model_files, clean_two_seg_dataset)
 
-np.savetxt("output/c_c_1_pos_test_loss.dat", clean_clean_one_seg_position_loss, delimiter=",")
-np.savetxt("output/c_c_1_tang_test_loss.dat", clean_clean_one_seg_orientation_loss, delimiter=",")
-np.savetxt("output/n_c_1_pos_test_loss.dat", noisy_clean_one_seg_position_loss, delimiter=",")
-np.savetxt("output/n_c_1_tang_test_loss.dat", noisy_clean_one_seg_orientation_loss, delimiter=",")
+clean_clean_one_seg_position_loss, clean_clean_one_seg_orientation_loss = test(
+    one_seg_model, clean_one_seg_model_files, clean_one_seg_dataset
+)
+noisy_clean_one_seg_position_loss, noisy_clean_one_seg_orientation_loss = test(
+    one_seg_model, noisy_one_seg_model_files, clean_one_seg_dataset
+)
+clean_clean_two_seg_position_loss, clean_clean_two_seg_orientation_loss = test(
+    two_seg_model, clean_two_seg_model_files, clean_two_seg_dataset
+)
+noisy_clean_two_seg_position_loss, noisy_clean_two_seg_orientation_loss = test(
+    two_seg_model, noisy_two_seg_model_files, clean_two_seg_dataset
+)
 
-np.savetxt("output/c_c_2_pos_test_loss.dat", clean_clean_two_seg_position_loss, delimiter=",")
-np.savetxt("output/c_c_2_tang_test_loss.dat", clean_clean_two_seg_orientation_loss, delimiter=",")
-np.savetxt("output/n_c_2_pos_test_loss.dat", noisy_clean_two_seg_position_loss, delimiter=",")
-np.savetxt("output/n_c_2_tang_test_loss.dat", noisy_clean_two_seg_orientation_loss, delimiter=",")
+np.savetxt(
+    "output/c_c_1_pos_test_loss.dat", clean_clean_one_seg_position_loss, delimiter=","
+)
+np.savetxt(
+    "output/c_c_1_tang_test_loss.dat",
+    clean_clean_one_seg_orientation_loss,
+    delimiter=",",
+)
+np.savetxt(
+    "output/n_c_1_pos_test_loss.dat", noisy_clean_one_seg_position_loss, delimiter=","
+)
+np.savetxt(
+    "output/n_c_1_tang_test_loss.dat",
+    noisy_clean_one_seg_orientation_loss,
+    delimiter=",",
+)
+
+np.savetxt(
+    "output/c_c_2_pos_test_loss.dat", clean_clean_two_seg_position_loss, delimiter=","
+)
+np.savetxt(
+    "output/c_c_2_tang_test_loss.dat",
+    clean_clean_two_seg_orientation_loss,
+    delimiter=",",
+)
+np.savetxt(
+    "output/n_c_2_pos_test_loss.dat", noisy_clean_two_seg_position_loss, delimiter=","
+)
+np.savetxt(
+    "output/n_c_2_tang_test_loss.dat",
+    noisy_clean_two_seg_orientation_loss,
+    delimiter=",",
+)

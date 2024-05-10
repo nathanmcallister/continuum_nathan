@@ -17,10 +17,10 @@ import kinematics
 TRAINING_ITERATIONS = 10
 
 # Input filenames
-clean_one_seg_filename = "training_data/clean_1_seg_2024_05_02_12_23_30.dat"
-noisy_one_seg_filename = "training_data/noisy_1_seg_2024_05_02_12_23_30.dat"
-clean_two_seg_filename = "training_data/clean_2_seg_2024_05_02_12_24_08.dat"
-noisy_two_seg_filename = "training_data/noisy_2_seg_2024_05_02_12_24_08.dat"
+clean_one_seg_filename = "training_data/clean_1_seg_2024_05_09_15_55_05.dat"
+noisy_one_seg_filename = "training_data/noisy_1_seg_2024_05_09_15_55_05.dat"
+clean_two_seg_filename = "training_data/clean_2_seg_2024_05_09_15_55_44.dat"
+noisy_two_seg_filename = "training_data/noisy_2_seg_2024_05_09_15_55_44.dat"
 
 # Data loading
 # Clean one seg

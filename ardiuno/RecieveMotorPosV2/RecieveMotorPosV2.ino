@@ -10,13 +10,9 @@
 
 // Servo definitions
 #define NUM_SERVOS 4
-#define SERVOMIN 100   // This is the 'minimum' pulse length count (out of 4096)
-#define SERVOMAX 500   // This is the 'maximum' pulse length count (out of 4096)
-#define SWEEPLEN 125   // This is the max distance from middle the servo will go
-#define SERVOMID 300   // This is the 'middle' pulse length count (out of 4096)
-#define USMIN 600      // This is the rounded 'minimum' microsecond length based on the minimum pulse of 150
-#define USMAX 2400     // This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
-#define SERVO_FREQ 50  // Analog servos run at ~50 Hz updates
+#define SERVOMIN 1221   // This is the 'minimum' pulse length count (out of 4096)
+#define SERVOMAX 2813   // This is the 'maximum' pulse length count (out of 4096)
+#define SERVO_FREQ 324  // Frequency is set to match output on scope
 
 // PWM driver
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -55,7 +51,7 @@ void setup() {
     * affects the calculations for the PWM update frequency. 
     * Failure to correctly set the int.osc value will cause unexpected PWM results
     */
-    pwm.setOscillatorFrequency(25100000);
+    pwm.setOscillatorFrequency(25000000);
     pwm.setPWMFreq(SERVO_FREQ);
 
     delay(10);
@@ -315,12 +311,12 @@ void move_motors(data_t* data) {
 
     for (int i = 0; i < NUM_SERVOS; i += 2) {
         // Send to pwm chip
-        pwm.setPWM(i, 0, motor_commands[i]);
+        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
     }
 
     for (int i = 1; i < NUM_SERVOS; i += 2) {
         // Send to pwm chip
-        pwm.setPWM(i, 0, motor_commands[i]);
+        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
     }
 }
 

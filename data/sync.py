@@ -17,10 +17,9 @@ else:
     os.mkdir(".sftp_temp")
 
 # Connect vis SFTP
-connection = pysftp.Connection(
-    host=host, username=user
-)
-
+print("Connecting to server")
+connection = pysftp.Connection(host=host, username=user)
+print("Connected")
 # Get regs and tip_cals
 connection.chdir("github/tracker-serial-interface")
 connection.get_r("regs", ".sftp_temp")
@@ -34,4 +33,3 @@ shutil.copytree(".sftp_temp/tip_cals", "tip_cals", dirs_exist_ok=True)
 shutil.copytree(".sftp_temp/base_positions", "base_positions", dirs_exist_ok=True)
 
 shutil.rmtree(".sftp_temp")
-
