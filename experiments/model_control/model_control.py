@@ -115,7 +115,7 @@ rmse = np.sqrt((error_norm**2).mean())
 
 ax = plt.figure().add_subplot(projection="3d")
 ax.plot(trajectory[0, :], trajectory[1, :], trajectory[2, :], "-o")
-ax.plot(control_pos[0, :], trajectory[1, :], control_pos[2, :], "-o")
+ax.plot(control_pos[0, :], trajectory[1, :], control_pos[2, :], "-x")
 plt.xlim((-32, 32))
 plt.ylim((-32, 32))
 ax.set_zlim((0, 64))
