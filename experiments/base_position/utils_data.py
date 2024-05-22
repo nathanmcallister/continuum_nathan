@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
 from typing import Tuple, List, Dict
+import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -141,6 +142,20 @@ class DataContainer:
         tang = np.concatenate([x[3:].reshape((-1, 1)) for x in self.outputs], axis=1)
 
         return cable_deltas, pos, tang
+
+    def clean(self, pos_threshold=128, tang_threshold=np.pi):
+        bad_indices = []
+        for i in range(self.num_measurements):
+            has_nan = np.isnan(self.inputs[i]).any() or np.isnan(self.outputs[i]).any()
+            bad_pos = (np.abs(self.outputs[i][:3]) > pos_threshold).any()
+            bad_tang = (np.abs(self.outputs[i][3:]) > tang_threshold).any()
+            if has_nan or bad_pos or bad_tang:
+                bad_indices.append(i)
+
+        for idx in reversed(sorted(bad_indices)):
+            self.inputs.pop(idx)
+            self.outputs.pop(idx)
+            self.num_measurements -= 1
 
 
 def parse_aurora_csv(

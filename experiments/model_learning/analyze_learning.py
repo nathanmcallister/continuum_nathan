@@ -1,15 +1,20 @@
 #!/bin/python3
 import numpy as np
 import matplotlib.pyplot as plt
+import utils_data
 
 num_iterations = 10
 
 # File inputs
+container = utils_data.DataContainer()
+container.file_import("training_data/clean_1_seg_2024_05_09_15_55_05.dat")
+container.clean()
+_, pos, _ = container.to_numpy()
 # Training loss vs epoch
 clean_train_loss_one_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/clean_train_loss_one_seg_{i}.dat", delimiter=","
+            f"output/run_05_09_2024a/clean_train_loss_one_seg_{i}.dat", delimiter=","
         ).reshape((1, -1))
         for i in range(num_iterations)
     ],
@@ -18,7 +23,7 @@ clean_train_loss_one_seg = np.concatenate(
 noisy_train_loss_one_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/noisy_train_loss_one_seg_{i}.dat", delimiter=","
+            f"output/run_05_09_2024a/noisy_train_loss_one_seg_{i}.dat", delimiter=","
         ).reshape((1, -1))
         for i in range(num_iterations)
     ],
@@ -27,7 +32,7 @@ noisy_train_loss_one_seg = np.concatenate(
 clean_train_loss_two_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/clean_train_loss_two_seg_{i}.dat", delimiter=","
+            f"output/run_05_09_2024a/clean_train_loss_two_seg_{i}.dat", delimiter=","
         ).reshape((1, -1))
         for i in range(num_iterations)
     ],
@@ -36,7 +41,7 @@ clean_train_loss_two_seg = np.concatenate(
 noisy_train_loss_two_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/noisy_train_loss_two_seg_{i}.dat", delimiter=","
+            f"output/run_05_09_2024a/noisy_train_loss_two_seg_{i}.dat", delimiter=","
         ).reshape((1, -1))
         for i in range(num_iterations)
     ],
@@ -47,7 +52,7 @@ noisy_train_loss_two_seg = np.concatenate(
 clean_validation_loss_one_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/clean_validation_loss_one_seg_{i}.dat",
+            f"output/run_05_09_2024a/clean_validation_loss_one_seg_{i}.dat",
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -57,7 +62,7 @@ clean_validation_loss_one_seg = np.concatenate(
 noisy_validation_loss_one_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/noisy_validation_loss_one_seg_{i}.dat",
+            f"output/run_05_09_2024a/noisy_validation_loss_one_seg_{i}.dat",
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -67,7 +72,7 @@ noisy_validation_loss_one_seg = np.concatenate(
 clean_validation_loss_two_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/clean_validation_loss_two_seg_{i}.dat",
+            f"output/run_05_09_2024a/clean_validation_loss_two_seg_{i}.dat",
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -77,7 +82,7 @@ clean_validation_loss_two_seg = np.concatenate(
 noisy_validation_loss_two_seg = np.concatenate(
     [
         np.loadtxt(
-            f"output/run_05_04_2024/noisy_validation_loss_two_seg_{i}.dat",
+            f"output/run_05_09_2024a/noisy_validation_loss_two_seg_{i}.dat",
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -87,28 +92,28 @@ noisy_validation_loss_two_seg = np.concatenate(
 
 # Test loss vs model
 clean_clean_pos_loss_one_seg = np.loadtxt(
-    "output/run_05_04_2024/c_c_1_pos_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/c_c_1_pos_test_loss.dat", delimiter=","
 )
 clean_clean_tang_loss_one_seg = np.loadtxt(
-    "output/run_05_04_2024/c_c_1_tang_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/c_c_1_tang_test_loss.dat", delimiter=","
 )
 noisy_clean_pos_loss_one_seg = np.loadtxt(
-    "output/run_05_04_2024/n_c_1_pos_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/n_c_1_pos_test_loss.dat", delimiter=","
 )
 noisy_clean_tang_loss_one_seg = np.loadtxt(
-    "output/run_05_04_2024/n_c_1_tang_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/n_c_1_tang_test_loss.dat", delimiter=","
 )
 clean_clean_pos_loss_two_seg = np.loadtxt(
-    "output/run_05_04_2024/c_c_2_pos_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/c_c_2_pos_test_loss.dat", delimiter=","
 )
 clean_clean_tang_loss_two_seg = np.loadtxt(
-    "output/run_05_04_2024/c_c_2_tang_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/c_c_2_tang_test_loss.dat", delimiter=","
 )
 noisy_clean_pos_loss_two_seg = np.loadtxt(
-    "output/run_05_04_2024/n_c_2_pos_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/n_c_2_pos_test_loss.dat", delimiter=","
 )
 noisy_clean_tang_loss_two_seg = np.loadtxt(
-    "output/run_05_04_2024/n_c_2_tang_test_loss.dat", delimiter=","
+    "output/run_05_09_2024a/n_c_2_tang_test_loss.dat", delimiter=","
 )
 
 combined_pos_loss = np.concatenate(
@@ -120,6 +125,9 @@ combined_pos_loss = np.concatenate(
     ],
     axis=1,
 )
+
+avg_pos_loss = combined_pos_loss.mean(axis=0)
+
 combined_tang_loss = np.concatenate(
     [
         clean_clean_tang_loss_one_seg.reshape((-1, 1)),
@@ -129,6 +137,8 @@ combined_tang_loss = np.concatenate(
     ],
     axis=1,
 )
+
+avg_tang_loss = combined_tang_loss.mean(axis=0)
 
 # Means and stdevs
 avg_clean_train_loss_one_seg = clean_train_loss_one_seg.mean(axis=0)
@@ -362,77 +372,13 @@ plt.legend(loc="upper right")
 
 plt.figure(9)
 for i in range(0, 10, 2):
-    plt.hist(
-        clean_clean_pos_loss_one_seg[i, clean_clean_pos_loss_one_seg[i, :] < 2],
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Position Error on One Segment Clean Data Model")
-plt.xlabel("Norm of Error (mm)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
-
-plt.figure(10)
-for i in range(0, 10, 2):
-    plt.hist(
-        180
-        / np.pi
-        * np.sqrt(
-            clean_clean_tang_loss_one_seg[
-                i, 180 / np.pi * np.sqrt(clean_clean_tang_loss_one_seg[i, :]) <= 10
-            ]
-        ),
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Orientation Error on One Segment Clean Data Model")
-plt.xlabel("Norm of Error (degrees)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
-
-plt.figure(11)
-for i in range(0, 10, 2):
-    plt.hist(
-        noisy_clean_pos_loss_one_seg[i, noisy_clean_pos_loss_one_seg[i, :] <= 2],
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Position Error on One Segment Noisy Data Model")
-plt.xlabel("Norm of Error (mm)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
-
-plt.figure(12)
-for i in range(0, 10, 2):
-    plt.hist(
-        180
-        / np.pi
-        * np.sqrt(
-            noisy_clean_tang_loss_one_seg[
-                i, 180 / np.pi * np.sqrt(noisy_clean_tang_loss_one_seg[i, :]) <= 10
-            ]
-        ),
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Orientation Error on One Segment Noisy Data Model")
-plt.xlabel("Norm of Error (degrees)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
-
-plt.figure(13)
-for i in range(0, 10, 2):
     plt.hist(clean_clean_pos_loss_two_seg[i, :], 100, alpha=0.3, label=f"Model {i+1}")
 plt.title("Position Error on Two Segment Clean Data Model")
 plt.xlabel("Norm of Error (mm)")
 plt.ylabel("Count")
 plt.legend(loc="upper right")
 
-plt.figure(14)
+plt.figure(10)
 for i in range(0, 10, 2):
     plt.hist(
         180 / np.pi * np.sqrt(clean_clean_tang_loss_two_seg[i, :]),
@@ -445,7 +391,7 @@ plt.xlabel("Norm of Error (degrees)")
 plt.ylabel("Count")
 plt.legend(loc="upper right")
 
-plt.figure(15)
+plt.figure(11)
 for i in range(0, 10, 2):
     plt.hist(noisy_clean_pos_loss_two_seg[i, :], 100, alpha=0.3, label=f"Model {i+1}")
 plt.title("Position Error on Two Segment Noisy Data Model")
@@ -453,7 +399,7 @@ plt.xlabel("Norm of Error (mm)")
 plt.ylabel("Count")
 plt.legend(loc="upper right")
 
-plt.figure(16)
+plt.figure(12)
 for i in range(0, 10, 2):
     plt.hist(
         180 / np.pi * np.sqrt(noisy_clean_tang_loss_two_seg[i, :]),
@@ -466,67 +412,61 @@ plt.xlabel("Norm of Error (degrees)")
 plt.ylabel("Count")
 plt.legend(loc="upper right")
 
-plt.figure(17)
-for i in range(0, 10, 2):
-    plt.hist(
-        clean_clean_pos_loss_two_seg[i, clean_clean_pos_loss_two_seg[i, :] < 2],
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Position Error on Two Segment Clean Data Model")
-plt.xlabel("Norm of Error (mm)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
+plt.figure(13)
+plt.boxplot(
+    combined_pos_loss[:, :2],
+    showfliers=False,
+    labels=[
+        f"Clean (Mean: {avg_pos_loss[0].item():.3f} mm)",
+        f"Noisy (Mean: {avg_pos_loss[1].item():.3f} mm)",
+    ],
+)
+plt.title("Position Error of One-Segment Models")
+plt.xlabel("Dataset")
+plt.ylabel("Position Error (mm)")
 
-plt.figure(18)
-for i in range(0, 10, 2):
-    plt.hist(
-        180
-        / np.pi
-        * np.sqrt(
-            clean_clean_tang_loss_two_seg[
-                i, 180 / np.pi * np.sqrt(clean_clean_tang_loss_two_seg[i, :]) <= 10
-            ]
-        ),
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Orientation Error on Two Segment Clean Data Model")
-plt.xlabel("Norm of Error (degrees)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
+plt.figure(14)
+plt.boxplot(
+    180 / np.pi * combined_tang_loss[:, :2],
+    showfliers=False,
+    labels=[
+        f"Clean (Mean: ${180 / np.pi * avg_tang_loss[0].item():.3f}^\circ$)",
+        f"Noisy (Mean: ${180 / np.pi * avg_tang_loss[1].item():.3f}^\circ$)",
+    ],
+)
+plt.title("Orientation Error of One-Segment Models")
+plt.xlabel("Dataset")
+plt.ylabel("Orientation Error (degrees)")
 
-plt.figure(19)
-for i in range(0, 10, 2):
-    plt.hist(
-        noisy_clean_pos_loss_two_seg[i, noisy_clean_pos_loss_two_seg[i, :] <= 2],
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Position Error on Two Segment Noisy Data Model")
-plt.xlabel("Norm of Error (mm)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
+plt.figure(15)
+plt.boxplot(
+    combined_pos_loss[:, 2:],
+    showfliers=False,
+    labels=[
+        f"Clean (Mean: {avg_pos_loss[2].item():.3f} mm)",
+        f"Noisy (Mean: {avg_pos_loss[3].item():.3f} mm)",
+    ],
+)
+plt.title("Position Error of Two-Segment Models")
+plt.xlabel("Dataset")
+plt.ylabel("Position Error (mm)")
 
-plt.figure(20)
-for i in range(0, 10, 2):
-    plt.hist(
-        180
-        / np.pi
-        * np.sqrt(
-            noisy_clean_tang_loss_two_seg[
-                i, 180 / np.pi * np.sqrt(noisy_clean_tang_loss_two_seg[i, :]) <= 10
-            ]
-        ),
-        100,
-        alpha=0.3,
-        label=f"Model {i+1}",
-    )
-plt.title("Zoomed Orientation Error on Two Segment Noisy Data Model")
-plt.xlabel("Norm of Error (degrees)")
-plt.ylabel("Count")
-plt.legend(loc="upper right")
+plt.figure(16)
+plt.boxplot(
+    180 / np.pi * combined_tang_loss[:, 2:],
+    showfliers=False,
+    labels=[
+        f"Clean (Mean: ${180 / np.pi * avg_tang_loss[2].item():.3f}^\circ$)",
+        f"Noisy (Mean: ${180 / np.pi * avg_tang_loss[3].item():.3f}^\circ$)",
+    ],
+)
+plt.title("Orientation Error of Two-Segment Models")
+plt.xlabel("Dataset")
+plt.ylabel("Orientation Error (degrees)")
+
+plt.figure()
+plt.plot(pos[0, :], pos[1, :], "o", alpha=0.3)
+plt.title("Simulation Training Data Position Measurements")
+plt.xlabel("x (mm)")
+plt.ylabel("y (mm)")
 plt.show()

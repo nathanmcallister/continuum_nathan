@@ -8,6 +8,7 @@ import numpy as np
 import os
 import datetime
 import utils_data
+import matplotlib.pyplot as plt
 
 
 class Model(nn.Module):
@@ -262,6 +263,7 @@ class Dataset(Dataset):
         self.time = data.time
         self.num_cables = data.num_cables
         self.num_auroras = data.num_auroras
+        self.num_measurements = data.num_measurements
 
         self.inputs = [torch.from_numpy(input).to(self.device) for input in data.inputs]
         self.outputs = [
@@ -347,6 +349,41 @@ class Dataset(Dataset):
     def save(self, filename: str = "dataset_out.txt"):
         raise NotImplementedError
 
+    def clean(self, pos_threshold=128, tang_threshold=np.pi):
+        bad_indices = []
+        for i in range(len(self)):
+            has_nan = np.isnan(self.inputs[i]).any() or np.isnan(self.outputs[i]).any()
+            bad_pos = (np.abs(self.outputs[i][:3]) > pos_threshold).any()
+            bad_tang = (np.abs(self.outputs[i][3:]) > tang_threshold).any()
+            if has_nan or bad_pos or bad_tang:
+                bad_indices.append(i)
+
+        for idx in reversed(sorted(bad_indices)):
+            self.inputs.pop(idx)
+            self.outputs.pop(idx)
+            self.num_measurements -= 1
+
+    def plot_pos(self):
+
+        # ax = plt.figure().add_subplot(projection="3d")
+        # for i in range(0, self.num_measurements, 10):
+        # ax.scatter(self.outputs[i][0], self.outputs[i][1], self.outputs[i][2])
+        # plt.title("Tip Positions of Datset")
+        # plt.xlabel("x (mm)")
+        # plt.ylabel("y (mm)")
+        # ax.set_zlabel("z (mm)")
+        plt.figure()
+        for i in range(0, self.num_measurements, 10):
+            plt.scatter(self.outputs[i][0], self.outputs[i][1])
+        plt.show()
+
+    def plot_tang(self):
+        ax = plt.figure().add_subplot(projection="3d")
+        for output in self.outputs:
+            ax.scatter(output[3], output[4], output[5])
+
+        plt.show()
+
 
 class PoseLoss(nn.Module):
     def __init__(self, scale=10, num_coils=1):
@@ -379,7 +416,7 @@ class PositionLoss(nn.Module):
         super(PositionLoss, self).__init__()
 
     def forward(self, input, target):
-        return nn.functional.mse_loss(input[:, :3], target[:, :3])
+        return torch.sqrt(nn.functional.mse_loss(input[:, :3], target[:, :3]) * 3)
 
 
 class OrientationLoss(nn.Module):
@@ -387,4 +424,4 @@ class OrientationLoss(nn.Module):
         super(OrientationLoss, self).__init__()
 
     def forward(self, input, target):
-        return nn.functional.mse_loss(input[:, 3:], target[:, 3:])
+        return torch.sqrt(nn.functional.mse_loss(input[:, 3:], target[:, 3:]) * 3)

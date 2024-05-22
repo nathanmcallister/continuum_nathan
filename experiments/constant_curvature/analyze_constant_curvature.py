@@ -318,5 +318,16 @@ plt.legend(["Phi", "Theta"])
 if save_figures:
     plt.savefig("figures/zero_xy.png")
 
+
+pos_error = np.linalg.norm(combined_pos - model_pos, axis=0)
+mean_pos_error = pos_error.mean()
+
+plt.figure()
+plt.hist(pos_error, 50)
+plt.title(f"Position Error of Kinematic CC Model (Mean: {mean_pos_error:.3f} mm)")
+plt.xlabel("Position Error (mm)")
+plt.ylabel("Count")
+
+
 if show_figures:
     plt.show()

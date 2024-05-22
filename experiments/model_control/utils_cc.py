@@ -131,6 +131,7 @@ def calculate_transform(robot_params: Tuple[float, ...]) -> np.ndarray:
 
     return T
 
+
 def plot_robot(
     robot_params: List[Tuple[float, ...]], points_per_segment: float = 32
 ) -> None:

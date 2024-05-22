@@ -21,10 +21,10 @@ clean_two_seg_dataset.load_from_file(clean_two_seg_test_file)
 noisy_two_seg_dataset = ANN.Dataset()
 noisy_two_seg_dataset.load_from_file(noisy_two_seg_test_file)
 
-clean_one_seg_model_files = glob.glob("models/run_05_04_2024/*_clean_one_seg.pt")
-noisy_one_seg_model_files = glob.glob("models/run_05_04_2024/*_noisy_one_seg.pt")
-clean_two_seg_model_files = glob.glob("models/run_05_04_2024/*_clean_two_seg.pt")
-noisy_two_seg_model_files = glob.glob("models/run_05_04_2024/*_noisy_two_seg.pt")
+clean_one_seg_model_files = glob.glob("models/run_05_09_2024a/*_clean_one_seg.pt")
+noisy_one_seg_model_files = glob.glob("models/run_05_09_2024a/*_noisy_one_seg.pt")
+clean_two_seg_model_files = glob.glob("models/run_05_09_2024a/*_clean_two_seg.pt")
+noisy_two_seg_model_files = glob.glob("models/run_05_09_2024a/*_noisy_two_seg.pt")
 
 one_seg_model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss()

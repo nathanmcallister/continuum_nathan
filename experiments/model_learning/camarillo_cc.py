@@ -25,7 +25,7 @@ def get_camarillo_matrices(
     # Loop through segments
     for segment_num in range(num_segments):
         # Set stiffness from inputted stiffness values
-        K_m_inv_diag_list[3 * segment_num: 3 * segment_num + 3] = [
+        K_m_inv_diag_list[3 * segment_num : 3 * segment_num + 3] = [
             1 / segment_stiffness_vals[segment_num][1],
             1 / segment_stiffness_vals[segment_num][1],
             1 / segment_stiffness_vals[segment_num][0],
@@ -47,19 +47,19 @@ def get_camarillo_matrices(
         D_matrix_list.append(D)
 
         # Form L0 diagonal matrix list
-        L_0_diag_list[3 * segment_num: 3 * segment_num + 3] = [
+        L_0_diag_list[3 * segment_num : 3 * segment_num + 3] = [
             segment_lengths[segment_num]
         ] * 3
 
         # Form Lt diagonal matrix list
         cables_so_far = sum(cables_per_segment[:segment_num])
         num_cables = cables_per_segment[segment_num]
-        L_t_diag_list[cables_so_far: cables_so_far + num_cables] = [
+        L_t_diag_list[cables_so_far : cables_so_far + num_cables] = [
             additional_cable_length + sum(segment_lengths[: segment_num + 1])
         ] * num_cables
 
         # Form Kt^-1 diagonal matrix list
-        K_t_inv_diag_list[cables_so_far: cables_so_far + num_cables] = [
+        K_t_inv_diag_list[cables_so_far : cables_so_far + num_cables] = [
             1 / x for x in cable_stiffness_vals[segment_num]
         ]
 
@@ -81,9 +81,9 @@ def get_camarillo_matrices(
         for segment_num in range(i, num_segments):
             cables_so_far = sum(cables_per_segment[:segment_num])
             num_cables = cables_per_segment[segment_num]
-            D[
-                3 * i: 3 * i + 3, cables_so_far: cables_so_far + num_cables
-            ] = D_matrix_list[segment_num]
+            D[3 * i : 3 * i + 3, cables_so_far : cables_so_far + num_cables] = (
+                D_matrix_list[segment_num]
+            )
 
     return D, K_m_inv, L_0, L_t, K_t_inv
 
@@ -117,9 +117,7 @@ def no_slack_model(
         ), "Number of cables in segment {} is inconsistent".format(segment_num)
         assert (
             len(segment_stiffness_vals[segment_num]) == 2
-        ), "Length of segment_stiffness_vals in segment {} is not 2".format(
-            segment_num
-        )
+        ), "Length of segment_stiffness_vals in segment {} is not 2".format(segment_num)
 
         num_cables = len(delta_lengths[segment_num])
         cables_per_segment[segment_num] = num_cables
@@ -148,9 +146,9 @@ def no_slack_model(
     )
 
     # Form C_m and C_m^-1
-    C_m = np.matmul(
-        np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
-    ) + np.matmul(L_t, K_t_inv)
+    C_m = np.matmul(np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D) + np.matmul(
+        L_t, K_t_inv
+    )
 
     C_m_inv = np.linalg.inv(C_m)
 
@@ -191,9 +189,7 @@ def slack_model(
         ), "Number of cables in segment {} is inconsistent".format(segment_num)
         assert (
             len(segment_stiffness_vals[segment_num]) == 2
-        ), "Length of segment_stiffness_vals in segment {} is not 2".format(
-            segment_num
-        )
+        ), "Length of segment_stiffness_vals in segment {} is not 2".format(segment_num)
 
         num_cables = len(delta_lengths[segment_num])
         cables_per_segment[segment_num] = num_cables
@@ -206,9 +202,7 @@ def slack_model(
             )
 
     # Convert delta_lengths to np array to form y
-    y_hat = np.concatenate(
-        [np.array(x, dtype=float) for x in delta_lengths], axis=0
-    )
+    y_hat = np.concatenate([np.array(x, dtype=float) for x in delta_lengths], axis=0)
 
     # Form matrices used for forward and inverse kinematics
     D, K_m_inv, L_0, L_t, K_t_inv = get_camarillo_matrices(
@@ -221,22 +215,20 @@ def slack_model(
     )
 
     # Form C_m and C_m^-1
-    C_m = np.matmul(
-        np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
-    ) + np.matmul(L_t, K_t_inv)
+    C_m = np.matmul(np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D) + np.matmul(
+        L_t, K_t_inv
+    )
     C_m_inv = np.linalg.inv(C_m)
 
     # Functions for slack minimization calculation
     def f(delta: np.ndarray) -> float:
-        out: float = np.matmul(
-            np.matmul(np.transpose(delta), C_m_inv), (y_hat + delta)
-        )
+        out: float = np.matmul(np.matmul(np.transpose(delta), C_m_inv), (y_hat + delta))
         return out
 
     def grad_f(delta: np.ndarray, out: np.ndarray) -> None:
-        out[()] = np.matmul(
-            np.transpose(C_m_inv) + C_m_inv, delta
-        ) + np.matmul(C_m_inv, y_hat)
+        out[()] = np.matmul(np.transpose(C_m_inv) + C_m_inv, delta) + np.matmul(
+            C_m_inv, y_hat
+        )
 
     def g(delta: np.ndarray, out: np.ndarray) -> np.ndarray:
         out[()] = np.matmul(C_m_inv, (y_hat + delta))

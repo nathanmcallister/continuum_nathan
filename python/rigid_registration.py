@@ -5,7 +5,7 @@ import kinematics
 import utils_data
 
 # Parameters
-REG_FILE = "../data/regs/reg_05_09_24b.csv"
+REG_FILE = "../data/regs/reg_05_21_24a.csv"
 TIP_FILE = "../tools/penprobe_04_20_24a"
 output = True
 num_repetitions = 5
@@ -17,8 +17,8 @@ SW_TIP_POS_FILE = "../tools/all_tip_registration_points_in_sw"
 T_SW_2_MODEL_FILE = "../tools/T_sw_2_model"
 T_SW_2_TIP_FILE = "../tools/T_sw_2_tip"
 
-# RMSE error dictionary initialization
-rmse = {}
+# FRE (fiducial regisitration error) dictionary initialization
+fre = {}
 
 # File inputs
 model_truth_in_sw = np.loadtxt(SW_MODEL_POS_FILE, delimiter=",")
@@ -66,10 +66,10 @@ ax.plot(tip_meas_in_aurora[0, :], tip_meas_in_aurora[1, :], tip_meas_in_aurora[2
 plt.show()
 
 # Perform registrations
-_, T_aurora_2_model, rmse["aurora_2_model"] = kinematics.rigid_align_svd(
-    model_meas_in_aurora, model_truth_in_model
+model_meas_in_model, T_aurora_2_model, fre["aurora_2_model"] = (
+    kinematics.rigid_align_svd(model_meas_in_aurora, model_truth_in_model)
 )
-_, T_aurora_2_tip, rmse["aurora_2_tip"] = kinematics.rigid_align_svd(
+tip_meas_in_tip, T_aurora_2_tip, fre["aurora_2_tip"] = kinematics.rigid_align_svd(
     tip_meas_in_aurora, tip_truth_in_tip
 )
 
@@ -100,7 +100,31 @@ print("T_tip_2_coil")
 print(T_tip_2_coil)
 print("T_tip_2_model")
 print(T_aurora_2_model @ np.linalg.inv(T_aurora_2_tip))
-print(rmse)
+print(fre)
+
+fle = {}
+
+for key, value in fre.items():
+    fle[key] = np.sqrt(value**2 * (1 - 2 / (12 * num_repetitions)))
+
+tre = {}
+
+model_cov = model_truth_in_model @ np.transpose(model_truth_in_model)
+model_tre_factor = 1 / (12 * num_repetitions) + 1 / 3 * 5**2 * (
+    1 / (model_truth_in_model[0, :] ** 2).mean()
+    + 1 / (model_truth_in_model[1, :] ** 2).mean()
+)
+
+tip_tre_factor = 1 / (12 * num_repetitions) + 1 / 2 * 3**2 * (
+    1 / (tip_truth_in_tip[0, :] ** 2).mean() + 1 / (tip_truth_in_tip[1, :] ** 2).mean()
+)
+
+tre["aurora_2_model"] = fle["aurora_2_model"] * model_tre_factor
+tre["aurora_2_tip"] = fle["aurora_2_tip"] * tip_tre_factor
+tre["tip_2_model"] = np.sqrt(tre["aurora_2_tip"] ** 2 + tre["aurora_2_model"] ** 2)
+
+print(model_tre_factor, tip_tre_factor, tre)
+
 
 if output:
     np.savetxt("../tools/T_aurora_2_model", T_aurora_2_model, delimiter=",")

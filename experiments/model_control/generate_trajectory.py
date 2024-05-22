@@ -10,7 +10,7 @@ r = np.sqrt(a**2 * np.abs(np.cos(2 * t)))
 pos = np.zeros((3, len(t)))
 pos[0, :] = r * np.cos(t)
 pos[1, :] = r * np.sin(t)
-l = 62
+l = 60
 
 for i in range(len(t)):
     x = pos[0, i]
@@ -49,4 +49,12 @@ plt.title("Desired Tip Trajectory")
 plt.xlabel("x (mm)")
 plt.ylabel("y (mm)")
 ax.set_zlabel("z (mm)")
+
+plt.figure()
+plt.plot(pos[0, :], pos[1, :], "-o")
+plt.title("Desired Tip Trajectory")
+plt.xlabel("x (mm)")
+plt.ylabel("y (mm)")
+plt.xlim((-32, 32))
+plt.ylim((-32, 32))
 plt.show()

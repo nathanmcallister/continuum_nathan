@@ -42,7 +42,9 @@ for i in range(4):
         kappa = theta[j] / l0
         seg_params = (l0, kappa, phi[i])
 
-        cable_delta_list = mike_cc.one_seg_inverse_kinematics(seg_params, cable_positions)
+        cable_delta_list = mike_cc.one_seg_inverse_kinematics(
+            seg_params, cable_positions
+        )
         for k in range(samples_per_position):
             meas = sample * samples_per_position + k
             cable_deltas[i, meas] = cable_delta_list[i]
@@ -101,5 +103,7 @@ for i in range(4):
 
 continuum_arduino.write_motor_vals(arduino, motor_setpoints)
 
-container.from_raw_data(container.date, container.time, 4, num_measurements, cable_deltas, pos, tang)
+container.from_raw_data(
+    container.date, container.time, 4, num_measurements, cable_deltas, pos, tang
+)
 container.file_export()
