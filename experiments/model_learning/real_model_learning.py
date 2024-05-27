@@ -9,12 +9,11 @@ import os
 import numpy as np
 import datetime
 import ANN
-import camarillo_cc
 import utils_cc
 import utils_data
 import kinematics
 
-TRAINING_ITERATIONS = 3
+TRAINING_ITERATIONS = 2
 
 # Input filenames
 data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
@@ -22,6 +21,7 @@ data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
 # Data loading
 container = utils_data.DataContainer()
 container.file_import(data_filename)
+
 dataset = ANN.Dataset()
 dataset.load_from_DataContainer(container)
 dataset.clean()
@@ -80,4 +80,4 @@ def train():
 
 for i in range(TRAINING_ITERATIONS):
     print(f"TRAINING ITERATION {i+1}")
-    # train()
+    train()
