@@ -21,6 +21,7 @@ data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
 # Data loading
 container = utils_data.DataContainer()
 container.file_import(data_filename)
+
 dataset = ANN.Dataset()
 dataset.load_from_DataContainer(container)
 dataset.clean()
