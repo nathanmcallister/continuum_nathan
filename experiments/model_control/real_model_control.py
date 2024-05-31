@@ -20,7 +20,7 @@ step_size = 1
 model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
 )
-model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
+model.load("../model_learning/models/real_05_28_2024/2024_05_28_06_50_08.pt")
 model.model.eval()
 
 
@@ -50,6 +50,7 @@ def loss_fcn(
 open_loop_dls = np.zeros((4, num_points))
 
 for i in range(num_points):
+    print(f"{i+1} of {num_points}")
     dl_0 = 0
     if i == 0:
         dl_0 = torch.tensor(np.array([0.0] * 4))
@@ -58,9 +59,15 @@ for i in range(num_points):
 
     x_star = trajectory_tensor[:, i].flatten()
 
-    optim_func = lambda x: loss_fcn(x, model, x_star, dl_0, (5.0, 1.0))
+    optim_func = lambda x: loss_fcn(x, model, x_star, dl_0, (50.0, 1.0))
 
-    result = opt.minimize(optim_func, dl_0.numpy(), method="BFGS", jac=True)
+    result = opt.minimize(
+        optim_func,
+        dl_0.numpy(),
+        method="L-BFGS-B",
+        jac=True,
+        bounds=[(-12, 12), (-12, 12), (-12, 12), (-12, 12)],
+    )
     open_loop_dls[:, i] = result["x"]
 
 np.savetxt("output/cable_trajectory.dat", open_loop_dls, delimiter=",")

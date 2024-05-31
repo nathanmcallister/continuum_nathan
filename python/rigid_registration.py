@@ -5,7 +5,7 @@ import kinematics
 import utils_data
 
 # Parameters
-REG_FILE = "../data/regs/reg_05_21_24a.csv"
+REG_FILE = "../data/regs/reg_05_27_24b.csv"
 TIP_FILE = "../tools/penprobe_04_20_24a"
 output = True
 num_repetitions = 5

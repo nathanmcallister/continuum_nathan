@@ -4,6 +4,7 @@ import serial
 import numpy as np
 import scipy.optimize as opt
 import torch
+import glob
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 import ANN
@@ -55,11 +56,16 @@ motor_setpoints = continuum_arduino.load_motor_setpoints("../../tools/motor_setp
 continuum_arduino.write_motor_vals(arduino, motor_setpoints)
 time.sleep(2)
 
-model = ANN.Model(
-    input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
-)
-model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
-model.model.eval()
+model_filenames = glob.glob("../model_learning/models/real_05_12_2024a/*.pt")
+
+models = []
+for model_file in model_filenames:
+    model = ANN.Model(
+        input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
+    )
+    model.load(model_file)
+    model.model.eval()
+    models.append(model)
 
 model_pos = np.nan * np.zeros((3, num_points))
 model_tang = np.nan * np.zeros_like(model_pos)
@@ -69,12 +75,14 @@ true_tang = np.nan * np.zeros_like(true_pos)
 for i in range(num_points):
     print(f"Trajectory point {i+1} of {num_points}")
 
-    dls_np = cable_trajectory[:, i]
+    dls_np = cable_trajectory[:4, i]
+    model_idx = int(cable_trajectory[4, i])
+
     deltas = np.zeros_like(dls_np)
-    jac = calc_jacobian(dls_np, model)
+    jac = calc_jacobian(dls_np, models[model_idx])
 
     dls_tensor = torch.tensor(dls_np, requires_grad=True)
-    output_tensor = model(dls_tensor)
+    output_tensor = models[model_idx](dls_tensor)
     model_pos[:, i] = output_tensor[:3].detach().numpy()
     model_tang[:, i] = output_tensor[3:].detach().numpy()
 

@@ -12,7 +12,7 @@ motor_std = 4
 motor_range = 12
 num_motors = 4
 num_measurements = 2**14
-sample_period = 1.95
+sample_period = 1
 
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")

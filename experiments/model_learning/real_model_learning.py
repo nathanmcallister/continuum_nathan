@@ -16,16 +16,23 @@ import kinematics
 TRAINING_ITERATIONS = 2
 
 # Input filenames
-data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
+old_data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
+data_filename = "training_data/kinematic_2024_05_28_01_22_07.dat"
 
 # Data loading
+old_container = utils_data.DataContainer()
+old_container.file_import(old_data_filename)
 container = utils_data.DataContainer()
 container.file_import(data_filename)
 
 dataset = ANN.Dataset()
 dataset.load_from_DataContainer(container)
 dataset.clean()
-print(f"Removed {2**14 - len(dataset)} faulty measurements from dataset")
+old_dataset = ANN.Dataset()
+old_dataset.load_from_DataContainer(old_container)
+old_dataset.clean()
+dataset = torch.utils.data.ConcatDataset([dataset, old_dataset])
+print(f"Removed {2**15 - len(dataset)} faulty measurements from dataset")
 
 
 def train():

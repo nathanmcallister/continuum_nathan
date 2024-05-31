@@ -14,8 +14,8 @@ import continuum_aurora
 
 trajectory = np.loadtxt("output/trajectory.dat", delimiter=",")
 model_pos = np.loadtxt("output/model_trajectory.dat", delimiter=",")
-open_loop_pos = np.loadtxt("output/true_trajectory.dat", delimiter=",")
 closed_loop_pos = np.loadtxt("output/closed_loop_trajectory.dat", delimiter=",")
+open_loop_pos = closed_loop_pos[:, 0::10]
 
 num_points = trajectory.shape[1]
 closed_loop_steps = 10
@@ -39,7 +39,7 @@ ax.plot(
     model_pos[1, :],
     model_pos[2, :],
     "-x",
-    label=f"Model (RMSE: {model_rmse:.3f} mm)",
+    label=f"Model Prediction (RMSE: {model_rmse:.3f} mm)",
 )
 ax.plot(
     open_loop_pos[0, :],
@@ -66,23 +66,23 @@ ax.set_zlabel("z (mm)")
 plt.legend()
 
 plt.figure()
-plt.plot(trajectory[0, :], trajectory[1, :], "o", label="Trajectory")
+plt.plot(trajectory[0, :], trajectory[1, :], "-o", label="Trajectory")
 plt.plot(
     model_pos[0, :],
     model_pos[1, :],
-    "x",
-    label=f"Model (RMSE: {model_rmse:.3f} mm)",
+    "-x",
+    label=f"Model Prediction (RMSE: {model_rmse:.3f} mm)",
 )
 plt.plot(
     open_loop_pos[0, :],
     open_loop_pos[1, :],
-    "+",
+    "-+",
     label=f"Open Loop (RMSE: {open_loop_rmse:.3f} mm)",
 )
 plt.plot(
     closed_loop_pos[0, closed_loop_steps - 1 :: closed_loop_steps],
     closed_loop_pos[1, closed_loop_steps - 1 :: closed_loop_steps],
-    "2",
+    "-2",
     label=f"Closed Loop (RMSE: {closed_loop_rmse:.3f} mm)",
     color=colors[-1],
 )
