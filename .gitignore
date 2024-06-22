@@ -1,6 +1,6 @@
 __pycache__
 .tmp.driveupload
 *.ini
-*/checkpoints/*
+checkpoints
 *.asv
 *.hidden
