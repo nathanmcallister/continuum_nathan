@@ -69,6 +69,9 @@ def dcm_2_quat(dcm: np.ndarray) -> np.ndarray:
 
         quaternions[:, i] = [qw, qx, qy, qz]
 
+    if n == 1:
+        return quaternions.flatten()
+
     return quaternions
 
 
@@ -105,7 +108,7 @@ def rmse(x: np.ndarray, y: np.ndarray) -> float:
 
     e = np.linalg.norm(x - y, axis=0)
 
-    return np.sqrt((e ** 2).mean())
+    return np.sqrt((e**2).mean())
 
 
 def rigid_align_svd(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -141,7 +144,7 @@ def rigid_align_svd(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 
 def penprobe_transform(
-    penprobe: np.ndarray, 
+    penprobe: np.ndarray,
     aurora_transforms: List[Tuple[np.ndarray, np.ndarray, float]],
 ) -> np.ndarray:
 
@@ -164,3 +167,33 @@ def tang_2_dcm(tang: np.ndarray) -> np.ndarray:
 def dcm_2_tang(dcm: np.ndarray) -> np.ndarray:
     tang_skew = logm(dcm)
     return np.array([-tang_skew[1, 2], tang_skew[0, 2], -tang_skew[0, 1]])
+
+
+def rotx(theta: float) -> np.ndarray:
+    return np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(theta), np.sin(theta)],
+            [0, -np.sin(theta), np.cos(theta)],
+        ]
+    )
+
+
+def roty(theta: float) -> np.ndarray:
+    return np.array(
+        [
+            [np.cos(theta), 0, -np.sin(theta)],
+            [0, 1, 0],
+            [np.sin(theta), 0, np.cos(theta)],
+        ]
+    )
+
+
+def rotz(theta: float) -> np.ndarray:
+    return np.array(
+        [
+            [np.cos(theta), np.sin(theta), 0],
+            [-np.sin(theta), np.cos(theta), 0],
+            [0, 0, 1],
+        ]
+    )

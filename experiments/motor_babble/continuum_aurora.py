@@ -6,6 +6,20 @@ import kinematics
 from typing import List, Dict
 
 
+class ContinuumAurora:
+
+    def __init__(self, serial_port_name: str = "/dev/ttyUSB0", timeout: float = 1):
+        self.serial_port = serial.Serial(
+            serial_port_name,
+            115200,
+            bytesize=serial.EIGHTBITS,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            timeout=timeout,
+            xonxoff=False,
+        )
+
+
 def init_aurora():
     return serial.Serial(
         "/dev/ttyUSB0",
