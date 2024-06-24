@@ -16,28 +16,39 @@ class ContinuumArduino:
         num_motors: int = 4,
         setpoint_filename: str = "../../tools/motor_setpoints",
         wheel_radii: np.ndarray = np.array([15, 15, 15, 15], dtype=float),
+        oscillator_frequency_kHz: int = 25_000,
+        servo_frequency: int = 324,
         serial_port_name: str = "/dev/ttyACM0",
         timeout: float = 1.0,
+        testing: bool = False,
     ):
         """
-        Creates ContinuumArduino Object and initializes serial port.
+        Opens serial port, and initializes Arduino to receive motor commands.
 
         Args:
-            num_motors (int): The number of motors in the system
-            setpoint_filename (str): Location of motor setpoint text file
-            wheel_radii (np.ndarray): Radii of pulley wheels
-            serial_port_name (str): The name of the serial port
+            num_motors: The number of motors in the system
+            setpoint_filename: Location of motor setpoint text file
+            wheel_radii: Radii of pulley wheels
+            oscillator_frequency_kHz: Clock frequency of PWM driver in kHz
+            servo_frequency: Frequency of PWM signal sent to servos in Hz
+            serial_port_name: The name of the serial port
             timeout: Time in seconds for Serial communication timeout
+            testing: Are we testing the system using a virtual serial port?
 
         Returns:
             ContinuumArduino: A ContinuumArduino object with an active serial port.
         """
         # Motor details
+        assert 0 < num_motors <= 16
         self.num_motors = num_motors
-        self.motor_setpoints = np.array(
-            load_motor_setpoints(setpoint_filename), dtype=int
-        )
+        self.motor_setpoints = self.load_motor_setpoints(setpoint_filename)
         self.wheel_radii = wheel_radii
+
+        # PWM driver details
+        assert 23_000 <= oscillator_frequency_kHz <= 27_000
+        assert 40 <= servo_frequency <= 1600
+        self.oscillator_frequency = oscillator_frequency_kHz
+        self.servo_frequency = servo_frequency
 
         # Servo parameters
         self.servo_min = 1221
@@ -64,183 +75,26 @@ class ContinuumArduino:
         self.error_flags[0x00] = "Length does not match"
         self.error_flags[0x01] = "CRC does not match"
         self.error_flags[0x02] = "Unknown packet flag"
+        self.error_flags[0x03] = (
+            "System has not been initialized (number of servos and frequencies set)"
+        )
 
         # Check dimensions
         assert len(self.motor_setpoints) == self.num_motors == len(self.wheel_radii)
 
         # Initialize Arduino
+        self.timeout = timeout
         self.arduino = serial.Serial(serial_port_name, 115200, timeout=timeout)
-        self.__write_num_motors()
 
-    def __build_payload(self, packet_flag: str, data: List[int]) -> bytearray:
-        """
-        Builds a payload (non transmission/ crc components of packet).
+        # Initialize system if not in testing mode
+        if not testing:
+            num_motors_success = self.__write_num_motors()
+            oscillator_freq_success = self.__write_oscillator_frequency()
+            servo_freq_success = self.__write_servo_frequency()
 
-        Args:
-            packet_flag: A packet flag denoting what type of packet is to be sent
-            data: The data that is to be sent with the packet
-        """
-        assert flag in self.packet_flags
-
-        payload = bytearray([self.packet_flags[packet_flag]])
-        payload.extend(struct.pack("H", 2 * len(data)))
-
-        for datum in data:
-            payload.extend(struct.pack("H", datum))
-
-        return payload
-
-    def __build_packet(self, packet_flag: str, data: List[int]) -> bytearray:
-        """
-        Builds a packet (bytearray) that can then be transmitted.
-
-        Args:
-            packet_flag: A packet flag denoting what type of packet is to be sent
-            data: The data that is to be sent with the packet
-
-        Returns:
-            bytearray: The packet with all transmission bytes, a payload, and a crc, which can be transmitted to the Arduino
-        """
-
-        payload = self.build_payload(packet_flag, data)
-        crc = self.crc_add_bytes(0, payload)
-        packet = bytearray(
-            [self.transmission_flags["DLE"], self.transmission_flags["STX"]]
-        )
-
-        for byte in payload:
-            packet.append(byte)
-            if byte == self.transmission_flags["DLE"]:
-                packet.append(self.transmission_flags["DLE"])
-        packet.extend([self.transmission_flags["DLE"], self.transmission_flags["ETX"]])
-
-        return packet
-
-    def __write_num_motors(self, attempts: int = 5) -> bool:
-        """
-        Transmit command for Arduino to update the number of motors it controls.
-
-        Args:
-            attempts: How many times the system will attempt to send the packet.
-
-        Returns:
-            bool: Was the transmission successful?
-        """
-
-        packet = self.__build_packet("NUM", [self.num_motors])
-
-        success = False
-        attempt = 0
-        while not success and attempt < attempts:
-            success = self.__transmit_packet(packet)
-
-        return success
-
-    def __transmit_packet(self, packet: bytearray) -> bool:
-        """
-        Transmit a packet to the arduino, and listen for response.
-
-        Args:
-            packet: The packet to be sent (including all transmission bytes and CRC)
-
-        Returns:
-            bool: Was the transmission successful?
-        """
-        # Flush and write packet
-        self.arduino.flush()
-        self.arduino.write(packet)
-
-        # Read until start sequence is found
-        bytes_until_start = self.arduino.read_until(
-            bytearray([self.transmission_flags["DLE"], self.transmission_flags["STX"]])
-        )
-
-        # No start sequence found
-        if not (
-            bytes_until_start[-2] == self.transmission_flags["DLE"]
-            and bytes_until_start[-1] == self.transmission_flags["STX"]
-        ):
-            print("Arduino serial timeout: no start sequence found")
-            return False
-
-        # Read until end sequence is found
-        bytes_until_end = self.arduino.read_until(
-            bytearray([self.transmission_flags["DLE"], self.transmission_flags["ETX"]])
-        )
-
-        # No end sequence found
-        if not (
-            bytes_until_end[-2] == self.transmission_flags["DLE"]
-            and bytes_until_end[-1] == self.transmission_flags["ETX"]
-        ):
-            print("Arduino serial timeout: no end sequence found")
-            return False
-
-        # Extract payload and crc
-        payload = bytes_until_end[:-3]
-        crc = bytes_until_end[-3]
-
-        # Expecting a communication type flag
-        if payload[0] != self.packet_flags["COM"]:
-            print("Non communication packet flag received from Arduino")
-            return False
-
-        # Unstuff DLEs
-        unstuffed_payload = bytearray()
-        dle = False
-        for byte in enumerate(payload):
-            if dle:
-                if byte == self.transmission_flags["DLE"]:
-                    unstuffed_payload.append(byte)
-                else:
-                    unstuffed_payload.extend(
-                        bytearray([self.transmission_flags["DLE"], byte])
-                    )
-                dle = false
-            else:
-                if byte == self.transmission_flags["DLE"]:
-                    dle = True
-                else:
-                    unstuffed_payload.append(byte)
-
-        # Check packet length match
-        expected_length = unstuffed_payload[1]
-        data = unstuffed_payload[2:]
-        if len(data) != expected_length:
-            print(
-                "Data received from Arduino does not match the length it specified in the packet"
-            )
-            return False
-
-        # Check packet length for communication packet specifically
-        if expected_length < 2 or expected_length > 3:
-            print(
-                f"Invalid length ({expected_length}) for ACK/ ERR packet from Arduino"
-            )
-            return False
-
-        # Compare CRC
-        if crc != self.crc_add_bytes(0, unstuffed_payload):
-            print("Arduino calculated CRC does not match our CRC (receiving packet).")
-            return False
-
-        # At this point, structure of packet is verified
-        # Received ACK: successful transmission
-        if unstuffed_payload[:2] == bytearray(
-            [self.transmission_flags["DLE"], self.transmission_flags["ACK"]]
-        ):
-            return True
-        # Received ERR: unsuccessful transmission
-        elif unstuffed_payload[:2] == bytearray(
-            [self.transmission_flags["DLE"], self.transmission_flags["ERR"]]
-        ):
-            print("Arduino sent ERR with the following error code:")
-            print(f"{unstuffed_payload[2]}:", self.error_flags[unstuffed_payload[2]])
-        # Received unexpected packet
-        else:
-            print("Arduino sent unexpected packet in response")
-
-        return False
+            print(f"Number of motors initialized correctly: {num_motors_success}")
+            print(f"Oscillator frequency initialized correctly: {oscillator_freq_success}")
+            print(f"Servo frequency initialized correctly: {servo_freq_success}")
 
     def write_dls(self, dls: np.ndarray, attempts: int = 5) -> bool:
         """
@@ -274,7 +128,8 @@ class ContinuumArduino:
         success = False
         attempt = 0
         while not success and attempt < attempts:
-            success = self.__transmit_packet(packet)
+            self.__transmit_packet(packet)
+            success = self.__get_response()
             attempt += 1
 
         return success
@@ -294,6 +149,9 @@ class ContinuumArduino:
             motor_setpoints: The servo setpoints representing 0 cable displacement
             wheel_radii: The radii of the cable pulleys
             attempts: Number of times to try to send the command
+
+        Results:
+            Was transmission successful?
         """
         assert num_motors == len(motor_setpoints) == len(wheel_radii)
 
@@ -302,52 +160,311 @@ class ContinuumArduino:
         self.wheel_radii = wheel_radii
 
         # Send packet to Arduino
-        success = False
-        attempt = 0
-        while not success and attempt < attempts:
-            success = self.__write_num_motors()
-            attempt += 1
+        return self.__write_num_motors()  # returns if successful
 
-        return success
-
-    def update_oscillator_frequency(self, freq: int, attemps: int = 5) -> bool:
+    def update_oscillator_frequency(self, freq_kHz: int, attemps: int = 5) -> bool:
         """
-        Update the oscillator frequency of the Adafruit PWM driver.
+        Update the oscillator frequency of the Adafruit PWM driver after ensuring it is value.
 
         Args:
-            freq: The desired frequency
+            freq_kHz: The desired frequency in kHz
+            attempts: The number of attempts to make the transmission
 
         Returns:
-            bool: Was the transmission successful?
+            Was the transmission successful?
         """
 
-        packet = self.__build_packet("OHZ", [freq])
+        if 23_000 <= freq_kHz <= 27_000:
+            self.oscillator_frequency = freq_kHz
+            return self.__write_oscillator_frequency(attempts)
 
-        success = False
-        attempt = 0
-        while not success and attempt < attempts:
-            success = self.__transmit_packet(packet)
-            attempt += 1
-
-        return success
+        else:
+            print("Invalid frequency given")
+            return False
 
     def update_servo_frequency(self, freq: int, attemps: int = 5) -> bool:
         """
         Update the servo (PWM) frequency of the Adafruit PWM driver.
 
         Args:
-            freq: The desired frequency
+            freq: The desired frequency in Hz
+            attempts: The number of attempts to make the transmission
 
         Returns:
-            bool: Was the transmission successful?
+            Was the transmission successful?
         """
 
-        packet = self.__build_packet("SHZ", [freq])
+        if 40 <= freq <= 1600:
+            self.servo_frequency = freq
+            return self.__write_servo_frequency(attempts)
+
+        else:
+            print("Invalid servo frequency given")
+            return False
+
+    def load_motor_setpoints(
+        self, filename: str = "../tools/motor_setpoints"
+    ) -> np.ndarray:
+        """
+        Loads motor setpoints from a file.
+
+        Args:
+            filename: The name of the file to read from
+
+        Returns:
+            A numpy array containing the setpoints
+        """
+        file = open(filename, "r")
+        values = file.readline()
+        return np.array([int(x) for x in values.split(",")], dtype=int)
+
+    def crc_add_bytes(self, CRC: int, payload: bytearray) -> int:
+        """
+        Calculates a CRC checksum given a bytearray.
+
+        Args:
+            CRC: Starting CRC value (Set to 0 for transmission)
+            payload: The byte array for which we are generating the CRC
+
+        Returns:
+            The CRC of the payload
+        """
+
+        CRC = CRC & 0xFF  # Ensure CRC is treated as uint8
+        for byte in payload:
+            for bit_num in range(8, 0, -1):
+                thisBit = (byte >> (bit_num - 1)) & 1
+                doInvert = (thisBit ^ ((CRC & 128) >> 7)) == 1
+                CRC = (CRC << 1) & 0xFF  # Ensure the result is treated as uint8
+                if doInvert:
+                    CRC = CRC ^ 7
+        return CRC
+
+    def __build_payload(self, packet_flag: str, data: List[int]) -> bytearray:
+        """
+        Builds a payload (non transmission/ crc components of packet).
+
+        Args:
+            packet_flag: A packet flag denoting what type of packet is to be sent
+            data: The data that is to be sent with the packet
+
+        Returns:
+            Payload bytearray which can be put into a packet
+        """
+        assert packet_flag in self.packet_flags
+
+        payload = bytearray([self.packet_flags[packet_flag]])
+        payload.extend(struct.pack("H", 2 * len(data)))
+
+        for datum in data:
+            payload.extend(struct.pack("H", datum))
+
+        return payload
+
+    def __build_packet(self, packet_flag: str, data: List[int]) -> bytearray:
+        """
+        Builds a packet (bytearray) that can then be transmitted.
+
+        Args:
+            packet_flag: A packet flag denoting what type of packet is to be sent
+            data: The data that is to be sent with the packet
+
+        Returns:
+            bytearray: The packet with all transmission bytes, a payload, and a crc, which can be transmitted to the Arduino
+        """
+
+        payload = self.__build_payload(packet_flag, data)
+        crc = self.crc_add_bytes(0, payload)
+        packet = bytearray(
+            [self.transmission_flags["DLE"], self.transmission_flags["STX"]]
+        )
+
+        for byte in payload:
+            packet.append(byte)
+            if byte == self.transmission_flags["DLE"]:
+                packet.append(self.transmission_flags["DLE"])
+        packet.extend([self.transmission_flags["DLE"], self.transmission_flags["ETX"]])
+
+        return packet
+
+    def __transmit_packet(self, packet: bytearray):
+        """
+        Transmit a packet to the arduino.
+
+        Args:
+            packet: The packet to be sent (including all transmission bytes and CRC)
+        """
+        # Flush and write packet
+        self.arduino.flush()
+        self.arduino.write(packet)
+
+    def __get_response(self) -> bool:
+        """
+        Listen for response from Arduino to determine if communication was successful.
+
+        Returns:
+            Was communication successful (received ACK)?
+        """
+        start_time = time.time()
+        buffer = bytearray()
+        reading = False
+
+        while not reading and (time.time() - start_time) < self.timeout:
+            buffer += self.arduino.read()
+
+            if (
+                bytearray(
+                    [self.transmission_flags["DLE"], self.transmission_flags["STX"]]
+                )
+                in buffer
+            ):
+                reading = True
+                buffer = bytearray()
+        if not reading:
+            print("Arduino serial timeout: no start sequence found")
+            return False
+
+        while reading and (time.time() - start_time) < self.timeout:
+            buffer += self.arduino.read()
+            if (
+                bytearray(
+                    [self.transmission_flags["DLE"], self.transmission_flags["ETX"]]
+                )
+                in buffer
+            ):
+                reading = False
+
+        if reading:
+            print("Arduino serial timeout: no end sequence found")
+            return False
+
+        # Extract payload and crc
+        payload = buffer[:-3]
+        crc = buffer[-3]
+
+        # Expecting a communication type flag
+        if payload[0] != self.packet_flags["COM"]:
+            print("Non communication packet flag received from Arduino")
+            return False
+
+        # Unstuff DLEs
+        unstuffed_payload = bytearray()
+        dle = False
+        for byte in payload:
+            if dle:
+                if byte == self.transmission_flags["DLE"]:
+                    unstuffed_payload.append(byte)
+                else:
+                    unstuffed_payload.extend(
+                        bytearray([self.transmission_flags["DLE"], byte])
+                    )
+                dle = False
+            else:
+                if byte == self.transmission_flags["DLE"]:
+                    dle = True
+                else:
+                    unstuffed_payload.append(byte)
+        # Check packet length match
+        expected_length = unstuffed_payload[1]
+        data = unstuffed_payload[2:]
+
+        if len(data) != expected_length:
+            print(
+                "Data received from Arduino does not match the length it specified in the packet"
+            )
+            return False
+
+        # Check packet length for communication packet specifically
+        if expected_length < 2 or expected_length > 3:
+            print(
+                f"Invalid length ({expected_length}) for ACK/ ERR packet from Arduino"
+            )
+            return False
+
+        # See if CRC matches what we expect (this should be zero)
+        if not self.crc_add_bytes(crc, unstuffed_payload):
+            print("Arduino calculated CRC does not match our CRC (receiving packet).")
+            return False
+
+        # At this point, structure of packet is verified
+        # Received ACK: successful transmission
+        if data[:2] == bytearray(
+            [self.transmission_flags["DLE"], self.transmission_flags["ACK"]]
+        ):
+            return True
+        # Received ERR: unsuccessful transmission
+        elif data[:2] == bytearray(
+            [self.transmission_flags["DLE"], self.transmission_flags["ERR"]]
+        ):
+            print("Arduino sent ERR with the following error code:")
+            print(f"{unstuffed_payload[2]}:", self.error_flags[unstuffed_payload[2]])
+        # Received unexpected packet
+        else:
+            print("Arduino sent unexpected packet in response")
+
+        return False
+
+    def __write_num_motors(self, attempts: int = 5) -> bool:
+        """
+        Transmit command for Arduino to update the number of motors it controls.
+
+        Args:
+            attempts: How many times the system will attempt to send the packet.
+
+        Returns:
+            Was the transmission successful?
+        """
+
+        packet = self.__build_packet("NUM", [self.num_motors])
 
         success = False
         attempt = 0
         while not success and attempt < attempts:
-            success = self.__transmit_packet(packet)
+            self.__transmit_packet(packet)
+            success = self.__get_response()
+            attempt += 1
+
+        return success
+
+    def __write_oscillator_frequency(self, attempts: int = 5) -> bool:
+        """
+        Transmit command for Arduino to update the PWM driver oscillator frequency.
+
+        Args:
+            attempts: How many times the system will attempt to send the packet.
+
+        Returns:
+            Was the transmission successful?
+        """
+
+        packet = self.__build_packet("OHZ", [self.oscillator_frequency])
+
+        success = False
+        attempt = 0
+        while not success and attempt < attempts:
+            self.__transmit_packet(packet)
+            success = self.__get_response()
+            attempt += 1
+
+        return success
+
+    def __write_servo_frequency(self, attempts: int = 5) -> bool:
+        """
+        Transmit command for Arduino to update the servo (PWM) frequency.
+
+        Args:
+            attempts: How many times the system will attempt to send the packet.
+
+        Returns:
+            Was the transmission successful?
+        """
+        packet = self.__build_packet("SHZ", [self.servo_frequency])
+
+        success = False
+        attempt = 0
+        while not success and attempt < attempts:
+            self.__transmit_packet(packet)
+            success = self.__get_response()
             attempt += 1
 
         return success
@@ -455,3 +572,26 @@ def load_motor_setpoints(filename: str = "../tools/motor_setpoints") -> List[int
     file = open(filename, "r")
     values = file.readline()
     return [int(x) for x in values.split(",")]
+
+
+def crc_add_bytes(CRC: int, payload: bytearray) -> int:
+    """
+    Calculates a CRC checksum given a bytearray.
+
+    Args:
+        CRC: Starting CRC value (Set to 0 for transmission)
+        payload: The byte array for which we are generating the CRC
+
+    Returns:
+        The CRC of the payload
+    """
+
+    CRC = CRC & 0xFF  # Ensure CRC is treated as uint8
+    for byte in payload:
+        for bit_num in range(8, 0, -1):
+            thisBit = (byte >> (bit_num - 1)) & 1
+            doInvert = (thisBit ^ ((CRC & 128) >> 7)) == 1
+            CRC = (CRC << 1) & 0xFF  # Ensure the result is treated as uint8
+            if doInvert:
+                CRC = CRC ^ 7
+    return CRC
