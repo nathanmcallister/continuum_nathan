@@ -72,12 +72,16 @@ class ContinuumArduino:
 
         # Transmission error flags
         self.error_flags = {}
-        self.error_flags[0x00] = "Length does not match"
-        self.error_flags[0x01] = "CRC does not match"
-        self.error_flags[0x02] = "Unknown packet flag"
-        self.error_flags[0x03] = (
+        self.error_flags[0x01] = "Length does not match"
+        self.error_flags[0x02] = "CRC does not match"
+        self.error_flags[0x03] = "Unknown or incorrect packet flag"
+        self.error_flags[0x04] = (
             "System has not been initialized (number of servos and frequencies set)"
         )
+        self.error_flags[0x05] = "Number of motors does not match command sent"
+        self.error_flags[0x06] = "Parameter update packet length is incorrect"
+        self.error_flags[0x07] = "Invalid parameter value sent"
+        self.error_flags[0x08] = "Invalid communication packet"
 
         # Check dimensions
         assert len(self.motor_setpoints) == self.num_motors == len(self.wheel_radii)
@@ -85,7 +89,7 @@ class ContinuumArduino:
         # Initialize Arduino
         self.timeout = timeout
         self.arduino = serial.Serial(serial_port_name, 115200, timeout=timeout)
-
+        time.sleep(2)
         # Initialize system if not in testing mode
         if not testing:
             num_motors_success = self.__write_num_motors()
@@ -93,7 +97,9 @@ class ContinuumArduino:
             servo_freq_success = self.__write_servo_frequency()
 
             print(f"Number of motors initialized correctly: {num_motors_success}")
-            print(f"Oscillator frequency initialized correctly: {oscillator_freq_success}")
+            print(
+                f"Oscillator frequency initialized correctly: {oscillator_freq_success}"
+            )
             print(f"Servo frequency initialized correctly: {servo_freq_success}")
 
     def write_dls(self, dls: np.ndarray, attempts: int = 5) -> bool:
@@ -108,7 +114,9 @@ class ContinuumArduino:
         Returns:
             bool: Was transmission successful?
         """
-        assert len(dls) == self.num_motors
+        if len(dls) != self.num_motors:
+            print("Dimension of dls does not match num_motors")
+            return False
 
         cmds = (
             (
@@ -153,16 +161,29 @@ class ContinuumArduino:
         Results:
             Was transmission successful?
         """
-        assert num_motors == len(motor_setpoints) == len(wheel_radii)
+        if not (num_motors == len(motor_setpoints) == len(wheel_radii)):
+            print("Number of motors must share same size as motor setpoints and wheel radii")
+            return False
+
+        old_num_motors = self.num_motors
+        old_motor_setpoints = self.motor_setpoints
+        old_wheel_radii = self.wheel_radii
 
         self.num_motors = num_motors
         self.motor_setpoints = motor_setpoints
         self.wheel_radii = wheel_radii
 
         # Send packet to Arduino
-        return self.__write_num_motors()  # returns if successful
+        success = self.__write_num_motors(attempts)
 
-    def update_oscillator_frequency(self, freq_kHz: int, attemps: int = 5) -> bool:
+        if not success:
+            self.num_motors = old_num_motors
+            self.motor_setpoints = old_motor_setpoints
+            self.wheel_radii = old_wheel_radii
+
+        return success
+
+    def update_oscillator_frequency(self, freq_kHz: int, attempts: int = 5) -> bool:
         """
         Update the oscillator frequency of the Adafruit PWM driver after ensuring it is value.
 
@@ -173,16 +194,20 @@ class ContinuumArduino:
         Returns:
             Was the transmission successful?
         """
-
         if 23_000 <= freq_kHz <= 27_000:
+            old_oscillator_frequency = self.oscillator_frequency
             self.oscillator_frequency = freq_kHz
-            return self.__write_oscillator_frequency(attempts)
+            success = self.__write_oscillator_frequency(attempts)
+            if not success:
+                self.oscillator_frequency = old_oscillator_frequency
+
+            return success
 
         else:
             print("Invalid frequency given")
             return False
 
-    def update_servo_frequency(self, freq: int, attemps: int = 5) -> bool:
+    def update_servo_frequency(self, freq: int, attempts: int = 5) -> bool:
         """
         Update the servo (PWM) frequency of the Adafruit PWM driver.
 
@@ -195,8 +220,14 @@ class ContinuumArduino:
         """
 
         if 40 <= freq <= 1600:
+            old_servo_frequency = self.servo_frequency
             self.servo_frequency = freq
-            return self.__write_servo_frequency(attempts)
+            success = self.__write_servo_frequency(attempts)
+
+            if not success:
+                self.servo_frequency = old_servo_frequency
+
+            return success
 
         else:
             print("Invalid servo frequency given")
@@ -254,7 +285,7 @@ class ContinuumArduino:
         assert packet_flag in self.packet_flags
 
         payload = bytearray([self.packet_flags[packet_flag]])
-        payload.extend(struct.pack("H", 2 * len(data)))
+        payload.append(2 * len(data))
 
         for datum in data:
             payload.extend(struct.pack("H", datum))
@@ -283,6 +314,7 @@ class ContinuumArduino:
             packet.append(byte)
             if byte == self.transmission_flags["DLE"]:
                 packet.append(self.transmission_flags["DLE"])
+        packet.append(crc)
         packet.extend([self.transmission_flags["DLE"], self.transmission_flags["ETX"]])
 
         return packet
@@ -308,31 +340,34 @@ class ContinuumArduino:
         start_time = time.time()
         buffer = bytearray()
         reading = False
+        dle_high = False
 
         while not reading and (time.time() - start_time) < self.timeout:
             buffer += self.arduino.read()
 
-            if (
-                bytearray(
-                    [self.transmission_flags["DLE"], self.transmission_flags["STX"]]
-                )
-                in buffer
-            ):
-                reading = True
-                buffer = bytearray()
+            if not dle_high:
+                if buffer and buffer[-1] == self.transmission_flags["DLE"]:
+                    dle_high = True
+            else:
+                if buffer and buffer[-1] == self.transmission_flags["STX"]:
+                    reading = True
+                    buffer = bytearray()
+                dle_high = False
+
         if not reading:
             print("Arduino serial timeout: no start sequence found")
             return False
 
         while reading and (time.time() - start_time) < self.timeout:
             buffer += self.arduino.read()
-            if (
-                bytearray(
-                    [self.transmission_flags["DLE"], self.transmission_flags["ETX"]]
-                )
-                in buffer
-            ):
-                reading = False
+
+            if not dle_high:
+                if buffer and buffer[-1] == self.transmission_flags["DLE"]:
+                    dle_high = True
+            else:
+                if buffer and buffer[-1] == self.transmission_flags["ETX"]:
+                    reading = False
+                dle_high = False
 
         if reading:
             print("Arduino serial timeout: no end sequence found")
@@ -382,7 +417,7 @@ class ContinuumArduino:
             return False
 
         # See if CRC matches what we expect (this should be zero)
-        if not self.crc_add_bytes(crc, unstuffed_payload):
+        if crc != self.crc_add_bytes(0, unstuffed_payload):
             print("Arduino calculated CRC does not match our CRC (receiving packet).")
             return False
 
@@ -397,7 +432,7 @@ class ContinuumArduino:
             [self.transmission_flags["DLE"], self.transmission_flags["ERR"]]
         ):
             print("Arduino sent ERR with the following error code:")
-            print(f"{unstuffed_payload[2]}:", self.error_flags[unstuffed_payload[2]])
+            print(f"{data[2]}:", self.error_flags[data[2]])
         # Received unexpected packet
         else:
             print("Arduino sent unexpected packet in response")

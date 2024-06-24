@@ -16,19 +16,31 @@
 #define SHZ 0x09 // Servo (PWM) frequency of PWM driver
 
 // Error codes
-#define LENGTH_ERROR 0x00
-#define CRC_ERROR 0x01
-#define TYPE_ERROR 0x02
-#define UNINITIALIZED_ERROR 0x03
+#define LENGTH_ERROR 0x01 // Length does not match
+#define CRC_ERROR 0x02 // CRC does not match
+#define TYPE_ERROR 0x03 // Unknown or incorrect packet flag
+#define UNINITIALIZED_ERROR 0x04 // System has not been initialized (number of servos and frequencies set)
+#define NUM_MOTOR_ERROR 0x05 // Number of motors does not match command sent
+#define PARAM_LENGTH_ERROR 0x06 // Parameter update packet length is incorrect
+#define PARAM_VALUE_ERROR 0x07 // Invalid parameter value sent
+#define COM_ERROR 0x08 // Invalid communication packet
 
 // Servo definitions
 #define SERVOMIN 1221   // This is the 'minimum' pulse length count (out of 4096)
 #define SERVOMAX 2813   // This is the 'maximum' pulse length count (out of 4096)
 
+// Testing
+#define TESTING false
+
+void send_ack();
+void send_error(uint8_t error_code);
+uint8_t crc_add_bytes(uint8_t crc, uint8_t* payload, int length);
+int unstuff_dle(int length);
+
 // System properties
-int num_servos;
-int oscillator_frequency;
-int servo_frequency;
+int num_servos = 0;
+int oscillator_frequency = 0;
+int servo_frequency = 0;
 
 // PWM driver
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -39,18 +51,14 @@ bool reading = false;
 int counter = 0;
 uint8_t buf[64];
 
-// Data packet
-typedef struct {
-    uint8_t data_length;
-    uint8_t* data_pointer;
-} data_t;
-
 void setup() {
     // Start serial
-    SerialUSB.begin(115200);
+    Serial.begin(115200);
     
     // Start PWM driver
-    pwm.begin();
+    if (!TESTING) {
+      pwm.begin();
+    } 
     /*
     * In theory the internal oscillator (clock) is 25MHz but it really isn't
     * that precise. You can 'calibrate' this by tweaking this number until
@@ -67,293 +75,233 @@ void setup() {
     * affects the calculations for the PWM update frequency. 
     * Failure to correctly set the int.osc value will cause unexpected PWM results
     */
-    pwm.setOscillatorFrequency(25000000);
-    pwm.setPWMFreq(SERVO_FREQ);
-
-    delay(10);
 }
 
 void loop() {
-    while (SerialUSB.available()) {
-
-        // Read from serial
-        uint8_t value = SerialUSB.read();
-        
-        // Put into buffer
-        buf[counter] = value;
-        counter++;
-
-        // Reading mode is after a start series (DLE STX) and before an end series (DLE ETX)
-        if (reading) {
-
-            // Last byte recieved was a DLE byte
-            if (dle_high) {
-
-                // End transmission
-                if (value == ETX) {
-
-                    // Exit reading mode
-                    reading = false;
-
-                    // Parse packet
-                    data_t* data_packet = parse_serial_data(counter);
-                    
-                    // Packet was recieved properly
-                    if (data_packet != NULL) {
-
-                        // Send acknowledgement
-                        send_ack();
-
-                        // Motor packet has data_length of 2 * # of servos
-                        if (data_packet->data_length == 2 * NUM_SERVOS) {
-                            move_motors(data_packet);
-                        }
-
-                        // Handle malloc
-                        free_data_pointer(data_packet);
-                    }
-
-                    // Error in data packet
-                    else {
-                        send_error();
-                    }
-                }
-
-                // Lower DLE flag
-                dle_high = false;
-            }
-
+    if (Serial.available()) {
+        uint8_t value = Serial.read();
+        if (!reading) {
             if (!dle_high) {
-
-                // Handle DLE flags
                 if (value == DLE) {
                     dle_high = true;
                 }
             }
-        }
-
-        // Not in reading mode
-        else {
-
-            // Raise dle_flag
-            if (value == DLE) {
-                dle_high = true;
-            }
-
             else {
-
-                // Start sequence received
-                if (dle_high && value == STX) {
-
-                    // Start writing into beginning of buffer
-                    buf[0] = DLE;
-                    buf[1] = STX;
-                    counter = 2;
+                if (value == STX) {
                     reading = true;
+                    counter = 0;
                 }
-
                 dle_high = false;
             }
         }
-    }
-}
-
-// Handle freeing heap memory for data structures
-void free_data_pointer(data_t* data) {
-
-    // Don't free NULL pointers
-    if (data == NULL) {
-        SerialUSB.println("Tried to free a data packet that was NULL.");
-    }
-
-    // Free heap memory
-    else {
-        free(data->data_pointer);
-        free(data);
-    }
-}
-
-// Take raw byte string and parse into data packet
-data_t* parse_serial_data(int end_of_packet) {
-
-    // Data struct pointer
-    data_t* data = NULL;
-
-    // State variables
-    bool dle = false;
-    bool data_reading = false;
-    int packet_length = -1;
-    int data_counter = 0;
-
-    // Go through byte string
-    for (int i = 0; i < end_of_packet; i++) {
-        uint8_t value = buf[i];
-
-        // Not hit start byte yet
-        if (!data_reading) {
-
-            // DLE flag is high
-            if (dle) {
-
-                // Start byte
-                if (value == STX) {
-                    data_reading = true;
-                }
-
-                // Lower DLE flag
-                dle = false;
-            }
-
-            // DLE flag is low
-            else {
-
-                // Raise DLE flag
-                if (value == DLE) {
-                    dle = true;
-                }
-            }
-        }
-        
-        // Reading data
         else {
-
-            // Packet length hasn't been read yet (directly after start byte)
-            if (packet_length == -1) {
-
-                // DLE flag is high
-                if (dle) {
-
-                    // Double DLE flag means packet length has the same value as DLE byte
-                    if (value == DLE) {
-                        packet_length = value;
-                        dle = false;
-                    }
-
-                    // Should not receive a flag for length, meaning that DLE is not good
-                    else {
-                        return NULL;
-                    }
-                }
-
-                // DLE flag is low
-                else {
-
-                    // Raise DLE flag
-                    if (value == DLE) {
-                        dle = true;
-                    }
-
-                    // Byte after start byte is packet length, so apply it
-                    else {
-                        packet_length = value;
-                        data = (data_t*) malloc(sizeof(data_t));
-                        data->data_length = (uint8_t) packet_length;
-                        data->data_pointer = (uint8_t*) calloc(packet_length, sizeof(uint8_t));
-                    }
+            buf[counter] = value;
+            if (!dle_high) {
+                if (value == DLE) {
+                    dle_high = true;
                 }
             }
-
-            // Packet length is set
             else {
+                if (value == ETX) {
+                    int payload_length = counter - 1; // length = counter + 1, payload_length = length - 2
+                    parse_payload(payload_length);
 
-                // DLE flag is high
-                if (dle) {
-
-                    // End of transmission
-                    if (value == ETX) {
-
-                        // Must have lost some bytes or there was an error in the packet length, return NULL pointer
-                        if (data_counter != packet_length) {
-                            free_data_pointer(data);
-                            return NULL;
-                        }
-
-                        // Valid data packet, return pointer to struct
-                        else {
-                            return data;
-                        }
-                    }
-
-                    // Overrun packet length, this is an error
-                    if (data_counter >= packet_length) {
-                        free_data_pointer(data);
-                        return NULL;
-                    }
-
-                    // Store value in array
-                    data->data_pointer[data_counter] = value;
-                    data_counter ++;
-                    dle = false;
+                    reading = false;
+                    counter = 0;
                 }
-
-                // DLE flag is low
-                else {
-
-                    // Raise DLE flag
-                    if (value == DLE) {
-                        dle = true;
-                    }
-
-                    // Non-DLE (data) byte
-                    else {
-
-                        // Overrun packet length, this is an error
-                        if (data_counter >= packet_length) {
-                            free_data_pointer(data);
-                            return NULL;
-                        }
-
-                        // Store value in array
-                        data->data_pointer[data_counter] = value;
-                        data_counter ++;
-                    }
-                }
+                dle_high = false;
+            }
+            if (reading) {
+                counter++;
             }
         }
     }
-
-    // No end of packet found, this is an error
-    free_data_pointer(data);
-    return NULL;
 }
 
-void move_motors(data_t* data) {
-    
-    // Go through data packet
-    uint16_t motor_commands[NUM_SERVOS];
-    for (int i = 0; i < NUM_SERVOS; i++) {
-        motor_commands[i] = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
+void parse_payload(int length) {
+    length = unstuff_dle(length);
+
+    uint8_t flag = buf[0];
+    uint8_t data_length = buf[1];
+
+    // Assert data length is equal to number of data bytes (total number of bytes minus the flag and data_length, and crc bytes)
+    if (length - 3 != data_length) {
+        send_error(LENGTH_ERROR);
+        return;
     }
 
-    for (int i = 0; i < NUM_SERVOS; i += 2) {
-        // Send to pwm chip
-        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
+    uint8_t packet_crc = buf[length-1];
+    uint8_t crc = crc_add_bytes(0, buf, length - 1);
+    if (crc != packet_crc) {
+        send_error(crc);
+        return;
     }
 
-    for (int i = 1; i < NUM_SERVOS; i += 2) {
-        // Send to pwm chip
-        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
+    // Motor command
+    if (flag == CMD) {
+        // See if system is initialized before updating motors
+        bool num_servos_uninitialized = num_servos == 0;
+        bool oscillator_frequency_uninitialized = oscillator_frequency == 0;
+        bool servo_frequency_uninitialized = servo_frequency == 0;
+        if (num_servos_uninitialized || oscillator_frequency_uninitialized || servo_frequency_uninitialized) {
+            send_error(UNINITIALIZED_ERROR);
+            return;
+        }
+
+        if (2 * num_servos != data_length) {
+            send_error(NUM_MOTOR_ERROR);
+            return;
+        }
+        // System is initialized, write to motors
+        for (int i = 0; i < num_servos; i++) {
+            uint16_t motor_command = ((uint16_t) buf[2*(i+1)]) | (((uint16_t) buf[2*(i+1)+1]) << 8);
+            if (!TESTING) {
+              pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_command)));
+            }
+        }
+
+        send_ack();
+    }
+    // Communication packet, just echo what was sent (assumes proper structure {COM, 0x02, DLE, ACK} or {COM 0x03, DLE, ERR, CODE})
+    else if (flag == COM) {
+        if (buf[3] == ACK) {
+            send_ack();
+        }
+        else if (buf[3] == ERR) {
+            send_error(buf[4]);
+        }
+        else {
+            send_error(COM_ERROR);
+        }
+    }
+    // Update the number of servos to control
+    else if (flag == NUM) {
+        if (data_length != 2) {
+            send_error(PARAM_LENGTH_ERROR);
+            return;
+        }
+
+        uint16_t new_num_servos = ((uint16_t) buf[2]) | (((uint16_t) buf[3]) << 8);
+
+        if (new_num_servos == 0 || new_num_servos > 16) {
+            send_error(PARAM_VALUE_ERROR);
+            return;
+        }
+        num_servos = new_num_servos;
+        send_ack();
+    }
+    // Update the oscillator clock frequency
+    else if (flag == OHZ) {
+        if (data_length != 2) {
+            send_error(PARAM_LENGTH_ERROR);
+            return;
+        }
+
+        uint16_t new_oscillator_frequency = (((uint16_t) buf[2]) | (((uint16_t) buf[3]) << 8)); // Unpack and convert value in kHz to Hz
+
+        if (new_oscillator_frequency < 23000 || new_oscillator_frequency > 27000) {
+            send_error(PARAM_VALUE_ERROR);
+            return;
+        }
+        oscillator_frequency = new_oscillator_frequency * 1000;
+        if (!TESTING) {
+          pwm.setOscillatorFrequency(oscillator_frequency);
+        }
+        send_ack();
+    }
+    // Update the servo (PWM) frequency
+    else if (flag == SHZ) {
+        if (data_length != 2) {
+            send_error(PARAM_LENGTH_ERROR);
+            return;
+        }
+
+        uint16_t new_servo_frequency = (((uint16_t) buf[2]) | (((uint16_t) buf[3]) << 8)); // Unpack and convert value in kHz to Hz
+
+        if (new_servo_frequency < 40 || new_servo_frequency > 1600) {
+            send_error(PARAM_VALUE_ERROR);
+            return;
+        }
+        servo_frequency = new_servo_frequency;
+        if (!TESTING) {
+          pwm.setPWMFreq(servo_frequency);
+        }
+
+        send_ack();
+    }
+    // Unknown packet type
+    else {
+        send_error(TYPE_ERROR);
     }
 }
 
 // Acknowledgement that packet was received correctly
 void send_ack() {
-    SerialUSB.write(DLE);
-    SerialUSB.write(STX);
-    SerialUSB.write(1);
-    SerialUSB.write(DLE);
-    SerialUSB.write(ACK);
-    SerialUSB.write(DLE);
-    SerialUSB.write(ETX);
+    uint8_t payload[4] = {COM, 0x02, DLE, ACK};
+    uint8_t crc = crc_add_bytes(0, payload, 4);
+    Serial.write(DLE);
+    Serial.write(STX);
+    for (int i = 0; i < 4; i++) {
+        Serial.write(payload[i]);
+    }
+    Serial.write(crc);
+    Serial.write(DLE);
+    Serial.write(ETX);
 }
 
 // Error in packet transmission
-void send_error() {
-    SerialUSB.write(DLE);
-    SerialUSB.write(STX);
-    SerialUSB.write(1);
-    SerialUSB.write(DLE);
-    SerialUSB.write(ERR);
-    SerialUSB.write(DLE);
-    SerialUSB.write(ETX);
+void send_error(uint8_t error_code) {
+    uint8_t payload[5] = {COM, 0x03, DLE, ERR, error_code};
+    uint8_t crc = crc_add_bytes(0, payload, 5);
+    Serial.write(DLE);
+    Serial.write(STX);
+    for (int i = 0; i < 5; i++) {
+        Serial.write(payload[i]);
+    }
+    Serial.write(crc);
+    Serial.write(DLE);
+    Serial.write(ETX);
+}
+
+uint8_t crc_add_bytes(uint8_t CRC, uint8_t* payload, int length) {
+    CRC = CRC & 0xFF;  // Ensure CRC is treated as uint8_t
+    for (int i = 0; i < length; i++) {
+        uint8_t byte = payload[i];
+        for (int bit_num = 8; bit_num > 0; bit_num--) {
+            uint8_t thisBit = (byte >> (bit_num - 1)) & 1;
+            uint8_t doInvert = (thisBit ^ ((CRC & 128) >> 7)) == 1;
+            CRC = CRC << 1;
+            if (doInvert) {
+                CRC = CRC ^ 7;
+            }
+        }
+    }
+    return CRC;
+}
+
+int unstuff_dle(int length) {
+    int counter = 0;
+    bool dle = false;
+    for (int i = 0; i < length; i++) {
+        if (dle) {
+            buf[counter] = DLE;
+            counter++;
+            if (buf[i] != DLE) {
+                buf[counter] = buf[i];
+                counter++;
+            }
+            dle = false;
+        }
+        else {
+            if (buf[i] == DLE) {
+                dle = true;
+            }
+            else {
+                buf[counter] = buf[i];
+                counter++;
+            }
+        }
+    }
+
+    return counter;
 }
