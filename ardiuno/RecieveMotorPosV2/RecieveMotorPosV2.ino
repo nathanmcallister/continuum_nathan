@@ -3,20 +3,16 @@
 
 // Serial definitions
 #define DLE 0x10
-#define STX 0x12
-#define ETX 0x13
-#define ACK 0x14
+#define STX 0x02
+#define ETX 0x03
+#define ACK 0x06
 #define ERR 0x15
 
 // Servo definitions
 #define NUM_SERVOS 4
-#define SERVOMIN 100   // This is the 'minimum' pulse length count (out of 4096)
-#define SERVOMAX 500   // This is the 'maximum' pulse length count (out of 4096)
-#define SWEEPLEN 125   // This is the max distance from middle the servo will go
-#define SERVOMID 300   // This is the 'middle' pulse length count (out of 4096)
-#define USMIN 600      // This is the rounded 'minimum' microsecond length based on the minimum pulse of 150
-#define USMAX 2400     // This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
-#define SERVO_FREQ 50  // Analog servos run at ~50 Hz updates
+#define SERVOMIN 1221   // This is the 'minimum' pulse length count (out of 4096)
+#define SERVOMAX 2813   // This is the 'maximum' pulse length count (out of 4096)
+#define SERVO_FREQ 324  // Frequency is set to match output on scope
 
 // PWM driver
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -55,7 +51,7 @@ void setup() {
     * affects the calculations for the PWM update frequency. 
     * Failure to correctly set the int.osc value will cause unexpected PWM results
     */
-    pwm.setOscillatorFrequency(25100000);
+    pwm.setOscillatorFrequency(25000000);
     pwm.setPWMFreq(SERVO_FREQ);
 
     delay(10);
@@ -306,15 +302,21 @@ data_t* parse_serial_data(int end_of_packet) {
 }
 
 void move_motors(data_t* data) {
-
+    
     // Go through data packet
+    uint16_t motor_commands[NUM_SERVOS];
     for (int i = 0; i < NUM_SERVOS; i++) {
+        motor_commands[i] = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
+    }
 
-        // Convert 2 little-endian uint8_t's to one uint16_t
-        uint16_t motor_command = ((uint16_t) data->data_pointer[2*i]) | ((uint16_t) data->data_pointer[2*i+1] << 8);
-        
+    for (int i = 0; i < NUM_SERVOS; i += 2) {
         // Send to pwm chip
-        pwm.setPWM(i, 0, motor_command);
+        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
+    }
+
+    for (int i = 1; i < NUM_SERVOS; i += 2) {
+        // Send to pwm chip
+        pwm.setPWM(i, 0, min(SERVOMAX, max(SERVOMIN, motor_commands[i])));
     }
 }
 
