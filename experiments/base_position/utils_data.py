@@ -175,8 +175,6 @@ def parse_aurora_csv(
         rms = probe_df.iloc[:, 13].to_numpy()
 
         for i in range(qs.shape[1]):
-            output[probe].append(
-                (qs[:, i].reshape((4, 1)), ts[:, i].reshape((3, 1)), rms[i].item())
-            )
+            output[probe].append((qs[:, i], ts[:, i], rms[i].item()))
 
     return output

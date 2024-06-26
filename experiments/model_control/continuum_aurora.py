@@ -102,9 +102,7 @@ class ContinuumAurora:
 
         T_coil_2_aurora = self.__aurora_transform_2_T(raw_aurora_transform)
 
-        return np.matmul(
-            self.T_aurora_2_model, np.matmul(T_coil_2_aurora, self.T_tip_2_coil)
-        )
+        return self.T_aurora_2_model @ T_coil_2_aurora @ self.T_tip_2_coil
 
     def crc_add_bytes(self, CRC: int, payload: bytearray):
         """
