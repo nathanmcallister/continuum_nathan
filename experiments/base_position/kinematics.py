@@ -5,6 +5,15 @@ from typing import List, Tuple
 
 
 def quat_2_dcm(quat: np.ndarray) -> np.ndarray:
+    """
+    Converts a quaternion (or many quaternions) to a DCM (rotation matrix)
+
+    Args:
+        quat: 4 x N array containing quaternions
+
+    Returns:
+        The corresponding DCMs with dimensions N x 3 x 3 (if N = 1, then dimensions are squeezed to 3 x 3)
+    """
     assert quat.shape[0] == 4
 
     if len(quat.shape) == 1:
@@ -31,6 +40,15 @@ def quat_2_dcm(quat: np.ndarray) -> np.ndarray:
 
 
 def dcm_2_quat(dcm: np.ndarray) -> np.ndarray:
+    """
+    Converts a DCM or DCMs to the corresponding quaternion
+
+    Args:
+        dcm: N x 3 x 3 (3 x 3 if N == 1) array containing DCMs
+
+    Returns:
+        A 4 x N array of quaternions
+    """
 
     if len(dcm.shape) == 2:
         dcm = dcm[np.newaxis, :, :]
@@ -76,6 +94,15 @@ def dcm_2_quat(dcm: np.ndarray) -> np.ndarray:
 
 
 def skew(vec: np.ndarray) -> np.ndarray:
+    """
+    Generates a skew symmetric matrix (used for tang map)
+
+    Args:
+        vec: A vector of dimension 3
+
+    Returns:
+        A skew symmetric 3 x 3 matrix
+    """
     assert len(vec) == 3
     out = np.zeros((3, 3))
 
@@ -90,6 +117,16 @@ def skew(vec: np.ndarray) -> np.ndarray:
 
 
 def Tmult(T: np.ndarray, x: np.ndarray) -> np.ndarray:
+    """
+    Applies a transformation matrix T to (x, y, z) coordinates
+
+    Args:
+        T: The 4 x 4 transformation matrix
+        x: A 3 x N array of the points to be transformed
+
+    Returns:
+        The 3 x N array of transformed points
+    """
     if len(x.shape) == 1:
         x = x[:, np.newaxis]
 
@@ -102,7 +139,16 @@ def Tmult(T: np.ndarray, x: np.ndarray) -> np.ndarray:
 
 
 def rmse(x: np.ndarray, y: np.ndarray) -> float:
-    """Calculates the RMS error between two ordered sets of points x and y."""
+    """
+    Calculates the RMS error between two ordered sets of points x and y.
+
+    Args:
+        x: A 3 x N array of points
+        y: A 3 x N array of points
+
+    Returns:
+        The RMS error between the two points
+    """
 
     assert x.shape == y.shape and x.shape[0] == 3
 
@@ -112,8 +158,18 @@ def rmse(x: np.ndarray, y: np.ndarray) -> float:
 
 
 def rigid_align_svd(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Uses SVD rigid registration to produce a transformation matrix that goes
+    """
+    Uses SVD rigid registration to produce a transformation matrix that goes
     from x to y.
+
+    Args:
+        x: The points in the original frame
+        y: The points in the transformed frame
+
+    Returns:
+        The points in x transformed into the y frame
+        The transformation matrix from x to y
+        The rmse error between the transformed x points in y and the y points
     """
 
     assert x.shape == y.shape and x.shape[0] == 3
@@ -147,10 +203,23 @@ def penprobe_transform(
     penprobe: np.ndarray,
     aurora_transforms: List[Tuple[np.ndarray, np.ndarray, float]],
 ) -> np.ndarray:
+    """
+    Performs penprobe transform from coil to tip position.
 
+    Args:
+        penprobe: A vector containing the position of the pen tip relative to the coil
+        aurora_transforms: The transforms containing coil positions, quaternions, and rmse
+
+    Returns:
+        The pen tip positions for all aurora transforms
+    """
+
+    # Make sure penprobe is in right shape
     penprobe = penprobe.reshape((3, 1))
 
     n = len(aurora_transforms)
+
+    # Go through all transforms and find tip positions
     tip_pos = np.nan * np.zeros((3, n))
     for i in range(n):
         R = quat_2_dcm(aurora_transforms[i][0])
@@ -160,16 +229,43 @@ def penprobe_transform(
 
 
 def tang_2_dcm(tang: np.ndarray) -> np.ndarray:
+    """
+    Converts from tang representation to DCM
+
+    Args:
+        tang: The tangent space representation of the orientation
+
+    Returns:
+        The corresponding DCM
+    """
     assert len(tang) == 3
     return expm(skew(tang))
 
 
 def dcm_2_tang(dcm: np.ndarray) -> np.ndarray:
+    """
+    Converts from DCM to tangent space representation
+
+    Args:
+        dcm: A DCM representing an orientation
+
+    Returns:
+        The corresponding tangent space representation
+    """
     tang_skew = logm(dcm)
     return np.array([-tang_skew[1, 2], tang_skew[0, 2], -tang_skew[0, 1]])
 
 
 def rotx(theta: float) -> np.ndarray:
+    """
+    Passive rotation matrix about the x-axis.
+
+    Args:
+        theta: The rotation angle in radians
+
+    Returns:
+        The corresponding rotation matrix
+    """
     return np.array(
         [
             [1, 0, 0],
@@ -180,6 +276,15 @@ def rotx(theta: float) -> np.ndarray:
 
 
 def roty(theta: float) -> np.ndarray:
+    """
+    Passive rotation matrix about the y-axis.
+
+    Args:
+        theta: The rotation angle in radians
+
+    Returns:
+        The corresponding rotation matrix
+    """
     return np.array(
         [
             [np.cos(theta), 0, -np.sin(theta)],
@@ -190,6 +295,15 @@ def roty(theta: float) -> np.ndarray:
 
 
 def rotz(theta: float) -> np.ndarray:
+    """
+    Passive rotation matrix about the z-axis.
+
+    Args:
+        theta: The rotation angle in radians
+
+    Returns:
+        The corresponding rotation matrix
+    """
     return np.array(
         [
             [np.cos(theta), np.sin(theta), 0],

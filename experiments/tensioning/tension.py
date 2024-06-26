@@ -15,7 +15,7 @@ are considered tensioned.  Repeats for each cable.
 """
 
 # Parameters
-distance_threshold = 1  # mm - Movement level to consider a cable "tightened"
+distance_threshold = 2  # mm - Movement level to consider a cable "tightened"
 max_delta = 15  # mm - Cannot pull a cable more than 15 mm from its starting length
 step_size = 0.1  # mm - How many mm we pull the cable each step
 num_motors = 4

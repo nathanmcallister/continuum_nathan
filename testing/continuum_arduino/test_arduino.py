@@ -29,7 +29,7 @@ valid_s_freq = arduino.update_servo_frequency(300, attempts=1)
 
 # write_dls
 invalid_dls = not arduino.write_dls(np.ones(6), attempts=1)
-valid_dls = arduino.write_dls(np.ones(4), attempts=1)
+valid_dls = arduino.write_dls(np.array([-4.0, 1.0, 1, 1]), attempts=1)
 
 # Print results
 print("Initialization test:")

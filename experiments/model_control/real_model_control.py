@@ -10,7 +10,7 @@ import kinematics
 import utils_cc
 import utils_data
 
-trajectory = np.loadtxt("output/trajectory.dat", delimiter=",")
+trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",")
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
 num_closed_loop_steps = 11
@@ -20,7 +20,8 @@ step_size = 1
 model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
 )
-model.load("../model_learning/models/real_05_28_2024/2024_05_28_06_50_08.pt")
+
+model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
 model.model.eval()
 
 
@@ -70,4 +71,4 @@ for i in range(num_points):
     )
     open_loop_dls[:, i] = result["x"]
 
-np.savetxt("output/cable_trajectory.dat", open_loop_dls, delimiter=",")
+np.savetxt("output/nathan_cable_trajectory.dat", open_loop_dls, delimiter=",")

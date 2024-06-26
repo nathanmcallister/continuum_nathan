@@ -52,8 +52,8 @@ int counter = 0;
 uint8_t buf[64];
 
 void setup() {
-    // Start serial
-    Serial.begin(115200);
+    // Start SerialUSB
+    SerialUSB.begin(115200);
     
     // Start PWM driver
     if (!TESTING) {
@@ -78,8 +78,8 @@ void setup() {
 }
 
 void loop() {
-    if (Serial.available()) {
-        uint8_t value = Serial.read();
+    if (SerialUSB.available()) {
+        uint8_t value = SerialUSB.read();
         if (!reading) {
             if (!dle_high) {
                 if (value == DLE) {
@@ -239,28 +239,28 @@ void parse_payload(int length) {
 void send_ack() {
     uint8_t payload[4] = {COM, 0x02, DLE, ACK};
     uint8_t crc = crc_add_bytes(0, payload, 4);
-    Serial.write(DLE);
-    Serial.write(STX);
+    SerialUSB.write(DLE);
+    SerialUSB.write(STX);
     for (int i = 0; i < 4; i++) {
-        Serial.write(payload[i]);
+        SerialUSB.write(payload[i]);
     }
-    Serial.write(crc);
-    Serial.write(DLE);
-    Serial.write(ETX);
+    SerialUSB.write(crc);
+    SerialUSB.write(DLE);
+    SerialUSB.write(ETX);
 }
 
 // Error in packet transmission
 void send_error(uint8_t error_code) {
     uint8_t payload[5] = {COM, 0x03, DLE, ERR, error_code};
     uint8_t crc = crc_add_bytes(0, payload, 5);
-    Serial.write(DLE);
-    Serial.write(STX);
+    SerialUSB.write(DLE);
+    SerialUSB.write(STX);
     for (int i = 0; i < 5; i++) {
-        Serial.write(payload[i]);
+        SerialUSB.write(payload[i]);
     }
-    Serial.write(crc);
-    Serial.write(DLE);
-    Serial.write(ETX);
+    SerialUSB.write(crc);
+    SerialUSB.write(DLE);
+    SerialUSB.write(ETX);
 }
 
 uint8_t crc_add_bytes(uint8_t CRC, uint8_t* payload, int length) {

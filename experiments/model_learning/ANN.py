@@ -12,6 +12,10 @@ import matplotlib.pyplot as plt
 
 
 class Model(nn.Module):
+    """
+    A simple implementation of an Artificial Neural Network (ANN).
+    """
+
     def __init__(
         self,
         input_dim: int,
@@ -76,11 +80,28 @@ class Model(nn.Module):
         self.checkpoints_path = checkpoints_path
         self.save_path = save_path
 
-    # Must send x to self.device
     def forward(self, x):
+        """
+        Evaluation of the neural network
+
+        Args:
+            x (tensor): Input with dimensions (batches x inputs)
+
+        Returns:
+            tensor: Output of model
+        """
         return self.model(x)
 
     def train_epoch(self, dataloader: DataLoader) -> float:
+        """
+        Performs one epoch of training on the model
+
+        Args:
+            dataloader: A pytorch DataLoader that contains the training data
+
+        Returns:
+            The average training loss of the model over the epoch
+        """
         size = len(dataloader.dataset)
         num_batches = len(dataloader)
         train_loss = 0
@@ -110,6 +131,15 @@ class Model(nn.Module):
         return train_loss
 
     def test_epoch(self, dataloader: DataLoader) -> float:
+        """
+        Performs one epoch (all batches of test data) of testing on the model
+
+        Args:
+            dataloader: A pytorch DataLoader that contains the test data
+
+        Returns:
+            The average test loss of the model over the epoch
+        """
         self.model.eval()
         num_batches = len(dataloader)
         test_loss = 0
@@ -127,6 +157,15 @@ class Model(nn.Module):
         return test_loss
 
     def test_dataset(self, dataset: Dataset):
+        """
+        Tests model output on all inputs in a Dataset.
+
+        Args:
+            dataset: A Pytorch Dataset containing all test data
+
+        Returns:
+            The test loss of each item in the dataset
+        """
         dataloader = DataLoader(dataset)
 
         self.model.eval()
@@ -149,6 +188,19 @@ class Model(nn.Module):
         checkpoints: bool = False,
         save_model: bool = False,
     ) -> Tuple[List[float], ...]:
+        """
+        Trains the model
+
+        Args:
+            train_dataloader: A dataloader containing the training data
+            test_dataloader: A dataloader containing the validation/ test data
+            num_epochs: The number of epochs to train the model
+            checkpoints: Will the model create checkpoints as it trains?
+            save_model: Will the model be saved to a .pt after training?
+
+        Returns:
+            The training and validation losses after each epoch
+        """
         train_loss = []
         test_loss = []
 
@@ -207,12 +259,24 @@ class Model(nn.Module):
             if save_model:
                 self.save()
 
+        # No checkpoints, so save last training iteration
+        else:
+            if save_model:
+                self.save()
+
         if test_dataloader:
             return train_loss, test_loss
 
         return train_loss, None
 
-    def save(self, model_save_path: str = None) -> None:
+    def save(self, model_save_path: str = None):
+        """
+        Saves the model to a .pt file
+
+        Args:
+            model_save_path: The path to save the model at.  If none is given, then it defaults to the save_path defined in initialization
+        """
+
         if model_save_path:
             self.save_path = model_save_path
 
@@ -223,7 +287,14 @@ class Model(nn.Module):
             self.save_path += ".pt"
         torch.save(self.model.state_dict(), self.save_path)
 
-    def load(self, model_load_path: str) -> None:
+    def load(self, model_load_path: str):
+        """
+        Loads the state_dict (parameter values) into the model
+
+        Args:
+            model_load_path: The location of the .pt file to load from
+        """
+
         if not model_load_path.endswith(".pt"):
             model_load_path += ".pt"
         self.model.load_state_dict(torch.load(model_load_path))
@@ -231,11 +302,20 @@ class Model(nn.Module):
 
 
 class Dataset(Dataset):
+    """
+    Houses data for training.  Built on top of DataContainer class from utils_data
+    """
     def __init__(self, filename: str = None):
+        """
+        Creates an empty Dataset object, and imports from a file if it is given
+
+        Args:
+            filename: The path to a file to import from
+        """
         self.date = None
         self.time = None
         self.num_cables = None
-        self.num_auroras = None
+        self.num_coils = None
 
         self.device = "cpu"
         # self.device = (
@@ -251,20 +331,35 @@ class Dataset(Dataset):
         self.outputs = []
 
         if filename:
-            self._parse_file(filename)
+            self.load_from_file(filename)
 
     def load_from_file(self, filename: str):
+        """
+        Imports data from a file.
+
+        Loads file into a DataContainer from utils_data, and then loads from the container.
+
+        Args:
+            filename: The name of the file to load from
+        """
         data = utils_data.DataContainer()
         data.file_import(filename)
         self.load_from_DataContainer(data)
 
     def load_from_DataContainer(self, data: utils_data.DataContainer):
+        """
+        Imports data from a DataContainer, setting all properties of the object.
+
+        Args:
+            data: a DataContainer object
+        """
         self.date = data.date
         self.time = data.time
         self.num_cables = data.num_cables
-        self.num_auroras = data.num_auroras
+        self.num_coils = data.num_coils
         self.num_measurements = data.num_measurements
 
+        # Convert numpy arrays to tensors and put them in the input and output arrays
         self.inputs = [torch.from_numpy(input).to(self.device) for input in data.inputs]
         self.outputs = [
             torch.from_numpy(output).to(self.device) for output in data.outputs
@@ -275,118 +370,146 @@ class Dataset(Dataset):
         date: Tuple[int, int, int],
         time: Tuple[int, int, int],
         num_cables: int,
-        num_auroras: int,
+        num_coils: int,
         inputs: List[np.ndarray],
         outputs: List[np.ndarray],
     ):
+        """
+        Takes raw data and uses it to fill the Dataset.
+
+        Args:
+            date: The date of data collection in the following form (Y, M, D)
+            time: The time of data collection in the following form (H, M, S)
+            num_cables: The number of cables () of the system
+            num_coils: The number of coils (3 position and 3 orientation measurements per coil)
+            inputs: The cable displacements
+            outputs: Pose data
+        """
+        assert len(inputs) == len(outputs), "Input and output must be same length"
+        for input, output in zip(inputs, outputs):
+            assert len(input) == num_cables, "All inputs must match the number of cables"
+            assert len(output) == 6 * num_coils, "All outputs must match the number of coils * 6 (3 position and 3 orientation measurements)"
+
         self.date = date
         self.time = time
         self.num_cables = num_cables
-        self.num_auroras = num_auroras
-        self.inputs = inputs
-        self.outputs = outputs
+        self.num_coils = num_coils
+        self.num_measurements = len(inputs)
+        # Convert lists of numpy arrays to lists of tensors
+        self.inputs = [torch.from_numpy(input).to(self.device) for input in inputs]
+        self.outputs = [torch.from_numpy(output).to(self.device) for output in outputs]
 
-    def _parse_file(self, filename: str):
-        with open(filename, "r") as file:
-            date_line = file.readline()
-            date_list = date_line.split(":")
-            assert date_list[0] == "DATE"
+    def from_numpy(
+        self,
+        date: Tuple[int, int, int],
+        time: Tuple[int, int, int],
+        num_cables: int,
+        num_coils: int,
+        inputs: np.ndarray,
+        outputs: np.ndarray,
+    ):
+        """
+        Populates dataset from input and output numpy arrays.
 
-            self.date = tuple([int(x) for x in date_list[1].split("-")])
+        Args:
+            date: The date of data collection in the following form (Y, M, D)
+            time: The time of data collection in the following form (H, M, S)
+            num_cables: The number of cables () of the system
+            num_coils: The number of coils (3 position and 3 orientation measurements per coil)
+            inputs: The cable displacements
+            outputs: Pose data
+        """
 
-            time_line = file.readline()
-            time_list = time_line.split(":")
-            assert time_list[0] == "TIME"
+        assert inputs.shape[1] == outputs.shape[1], "Make sure there are the same number of measurements"
+        assert inputs.shape[0] == num_cables, "Ensure input size matches number of cables"
+        assert outputs.shape[0] == 6 * num_coils, "Ensure output size matches number of measurements from coils"
 
-            self.time = tuple([int(x) for x in time_list[1:]])
+        self.date = date
+        self.time = time
+        self.num_cables = num_cables
+        self.num_coils = num_coils
+        self.num_measurements = len(inputs)
 
-            num_cables_line = file.readline()
-            self.num_cables = int(num_cables_line.split(":")[1])
+        # Converts numpy arrays to lists of tensors
+        self.inputs = [torch.from_numpy(inputs[:, i]).to(self.device) for i in range(self.num_measurements)]
+        self.outputs = [torch.from_numpy(outputs[:, i]).to(self.device) for i in range(self.num_measurements)]
 
-            num_auroras_line = file.readline()
-            num_auroras_list = num_auroras_line.split(":")
-            self.num_auroras = int(num_auroras_list[1])
-
-            num_measurements_line = file.readline()
-            num_measurements_list = num_measurements_line.split(":")
-            assert num_measurements_list[0] == "NUM_MEASUREMENTS"
-
-            self.num_measurements = int(num_measurements_list[1])
-
-            spacer = file.readline()
-            assert spacer.strip() == "---"
-
-            num_outputs = 0
-            for dof in self.aurora_dofs:
-                if dof == 5:
-                    num_outputs += 5
-                else:
-                    num_outputs += 6
-
-            while line := file.readline():
-                row = line.split(",")
-                self.inputs.append(
-                    torch.tensor(
-                        [float(x) for x in row[1 : self.num_cables + 1]],
-                        dtype=float,
-                    )
-                ).to(self.device)
-                self.outputs.append(
-                    torch.tensor(
-                        [float(x) for x in row[self.num_cables + 1 :]],
-                        dtype=float,
-                    )
-                ).to(self.device)
-
-            assert len(self.inputs) == len(self.outputs) == self.num_measurements
-
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Returns number of items in Dataset
+        """
         return len(self.inputs)
 
     def __getitem__(self, idx):
+        """
+        Gets the (input, output) datapoint at the given index
+        """
         return self.inputs[idx], self.outputs[idx]
 
     def save(self, filename: str = "dataset_out.txt"):
+        """
+        Saves the dataset to a file.
+        """
         raise NotImplementedError
 
     def clean(self, pos_threshold=128, tang_threshold=np.pi):
+        """
+        Removes all NaNs and faulty measurements from dataset
+
+        Args:
+            pos_threshold: Maximum position coordinate value before point is discarded
+            tang_threshold: Maximum orientation tang value before point is discarded
+        """
+
         bad_indices = []
         for i in range(len(self)):
+            # Check for nan
             has_nan = np.isnan(self.inputs[i]).any() or np.isnan(self.outputs[i]).any()
+            # Position is outside valid domain
             bad_pos = (np.abs(self.outputs[i][:3]) > pos_threshold).any()
+            # orientation is outside valid domain
             bad_tang = (np.abs(self.outputs[i][3:]) > tang_threshold).any()
+
             if has_nan or bad_pos or bad_tang:
                 bad_indices.append(i)
 
-        for idx in reversed(sorted(bad_indices)):
+        # Remove all bad indices from Dataset, taking into account number of measurements removed
+        for idx in sorted(bad_indices, reverse=True):
             self.inputs.pop(idx)
             self.outputs.pop(idx)
             self.num_measurements -= 1
 
-    def plot_pos(self):
+    def plot_pos(self, decimation: int = 10) -> plt.figure:
+        """
+        Create a scatter plot of the (x, y) positions of the points in the Dataset
 
-        # ax = plt.figure().add_subplot(projection="3d")
-        # for i in range(0, self.num_measurements, 10):
-        # ax.scatter(self.outputs[i][0], self.outputs[i][1], self.outputs[i][2])
-        # plt.title("Tip Positions of Datset")
-        # plt.xlabel("x (mm)")
-        # plt.ylabel("y (mm)")
-        # ax.set_zlabel("z (mm)")
-        plt.figure()
-        for i in range(0, self.num_measurements, 10):
+        Args:
+            decimation: Only plot one point for every decimation points in the Dataset
+
+        Returns:
+            The matplotlib figure
+        """
+        fig = plt.figure()
+        for i in range(0, self.num_measurements, decimation):
             plt.scatter(self.outputs[i][0], self.outputs[i][1])
         plt.show()
 
-    def plot_tang(self):
-        ax = plt.figure().add_subplot(projection="3d")
-        for output in self.outputs:
-            ax.scatter(output[3], output[4], output[5])
-
-        plt.show()
+        return fig
 
 
 class PoseLoss(nn.Module):
-    def __init__(self, scale=10, num_coils=1):
+    """
+    A weighted MSE loss function used to consider both position error and orientation error
+    """
+
+    def __init__(self, scale: float = 10, num_coils: int = 1):
+        """
+        Creates PoseLoss object, which can be passed to a Model for its loss function.
+
+        Args:
+            scale: How much to scale up orientation error relative to position error
+            num_coils: Number of aurora coils (poses) of system
+        """
         super(PoseLoss, self).__init__()
 
         self.device = "cpu"
@@ -403,7 +526,17 @@ class PoseLoss(nn.Module):
             np.concatenate((np.ones(3 * num_coils), scale * np.ones(3 * num_coils)))
         ).to(self.device)
 
-    def forward(self, input, target):
+    def forward(self, pred, target):
+        """
+        Calculates loss
+
+        Args:
+            pred (tensor): The prediction of the model
+            target (tensor): The true value
+
+        Returns:
+            Loss
+        """
         expanded_weights = self.weights.expand(input.size(0), -1)
 
         return nn.functional.mse_loss(
@@ -412,16 +545,50 @@ class PoseLoss(nn.Module):
 
 
 class PositionLoss(nn.Module):
+    """
+    PositionLoss is a MSE loss function that only considers position
+    """
+
     def __init__(self):
+        """
+        Creates PositionLoss object, which can be passed to a Model for its loss function.
+        """
         super(PositionLoss, self).__init__()
 
     def forward(self, input, target):
+        """
+        Calculates loss
+
+        Args:
+            pred (tensor): The prediction of the model
+            target (tensor): The true value
+
+        Returns:
+            Loss
+        """
         return torch.sqrt(nn.functional.mse_loss(input[:, :3], target[:, :3]) * 3)
 
 
 class OrientationLoss(nn.Module):
+    """
+    OrientationLoss is a MSE loss function that only considers orientation
+    """
+
     def __init__(self):
+        """
+        Creates OrientationLoss object, which can be passed to a Model for its loss function.
+        """
         super(OrientationLoss, self).__init__()
 
-    def forward(self, input, target):
+    def forward(self, pred, target):
+        """
+        Calculates loss
+
+        Args:
+            pred (tensor): The prediction of the model
+            target (tensor): The true value
+
+        Returns:
+            Loss
+        """
         return torch.sqrt(nn.functional.mse_loss(input[:, 3:], target[:, 3:]) * 3)

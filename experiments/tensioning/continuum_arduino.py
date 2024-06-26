@@ -36,7 +36,7 @@ class ContinuumArduino:
             testing: Are we testing the system using a virtual serial port?
 
         Returns:
-            ContinuumArduino: A ContinuumArduino object with an active serial port.
+            A ContinuumArduino object with an active serial port.
         """
         # Motor details
         assert 0 < num_motors <= 16
@@ -102,6 +102,30 @@ class ContinuumArduino:
             )
             print(f"Servo frequency initialized correctly: {servo_freq_success}")
 
+    def dls_2_cmds(self, dls: np.ndarray) -> List[int]:
+        """
+        Converts changes in cable lengths to commands to send to the Aruino.
+
+        Args:
+            dls: Changes in cable lengths
+
+        Returns:
+            A list of PWM values for each motor (the commands to be sent)
+        """
+        cmds = (
+            (
+                self.motor_setpoints
+                + (self.servo_max - self.servo_min)
+                / (2 * np.pi / 3)
+                * dls
+                / self.wheel_radii
+            )
+            .round()
+            .astype(int)
+        ).tolist()
+
+        return cmds
+
     def write_dls(self, dls: np.ndarray, attempts: int = 5) -> bool:
         """
         Converts cable length deltas (dls) to motor commands, then sends the
@@ -118,17 +142,8 @@ class ContinuumArduino:
             print("Dimension of dls does not match num_motors")
             return False
 
-        cmds = (
-            (
-                self.motor_setpoints
-                + (self.servo_max - self.servo_min)
-                / (2 * np.pi / 3)
-                * dls
-                / self.wheel_radii
-            )
-            .round()
-            .astype(int)
-        ).tolist()
+        # Map cable displacements to motor commands
+        cmds = self.dls_2_cmds(dls)
 
         packet = self.__build_packet("CMD", cmds)
 
@@ -158,11 +173,13 @@ class ContinuumArduino:
             wheel_radii: The radii of the cable pulleys
             attempts: Number of times to try to send the command
 
-        Results:
+        Returns:
             Was transmission successful?
         """
         if not (num_motors == len(motor_setpoints) == len(wheel_radii)):
-            print("Number of motors must share same size as motor setpoints and wheel radii")
+            print(
+                "Number of motors must share same size as motor setpoints and wheel radii"
+            )
             return False
 
         old_num_motors = self.num_motors
@@ -232,6 +249,50 @@ class ContinuumArduino:
         else:
             print("Invalid servo frequency given")
             return False
+
+    def update_motor_setpoints(self, setpoints: np.ndarray):
+        """
+        Updates the motor setpoints of the system.
+
+        Args:
+            setpoints: An array containing the new setpoints
+
+        Raises:
+            AssertionError: If number of motor setpoints does not match the number
+            of motors.
+        """
+
+        assert (
+            len(setpoints) == self.num_motors
+        ), "Setpoints do not match number of motors"
+
+        self.motor_setpoints = setpoints.astype(int)
+
+    def reset_motor_setpoints(self):
+        """
+        Resets the motor setpoints to the middle of the servo range
+        """
+        self.motor_setpoints = (
+            np.ones(self.num_motors, dtype=int) * (self.servo_max - self.servo_min) // 2
+        )
+
+    def update_wheel_radii(self, wheel_radii: np.ndarray):
+        """
+        Updates the wheel radii of the system.
+
+        Args:
+            wheel_radii: An array containing the new wheel radii
+
+        Raises:
+            AssertionError: If number of wheel radii does not match the number of
+            motors
+        """
+
+        assert (
+            len(wheel_radii) == self.num_motors
+        ), "Number of radii does not match number of motors"
+
+        self.wheel_radii = wheel_radii.astype(float)
 
     def load_motor_setpoints(
         self, filename: str = "../tools/motor_setpoints"
@@ -306,15 +367,25 @@ class ContinuumArduino:
 
         payload = self.__build_payload(packet_flag, data)
         crc = self.crc_add_bytes(0, payload)
+
+        # Start packet
         packet = bytearray(
             [self.transmission_flags["DLE"], self.transmission_flags["STX"]]
         )
 
+        # Build packet from payload
         for byte in payload:
             packet.append(byte)
+            # Stuff DLE
             if byte == self.transmission_flags["DLE"]:
                 packet.append(self.transmission_flags["DLE"])
+
+        # Add CRC (and stuff DLE if need be)
         packet.append(crc)
+        if crc == self.transmission_flags["DLE"]:
+            packet.append(self.transmission_flags["DLE"])
+
+        # End packet
         packet.extend([self.transmission_flags["DLE"], self.transmission_flags["ETX"]])
 
         return packet
