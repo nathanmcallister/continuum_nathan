@@ -3,7 +3,7 @@ import pysftp
 import os
 import shutil
 
-puppet_info_filename = "../.puppet.hidden"
+puppet_info_filename = os.path.realpath("../.puppet.hidden")
 file = open(puppet_info_filename, "r")
 puppet_info = file.readline().strip().split("@")
 user = puppet_info[0]
