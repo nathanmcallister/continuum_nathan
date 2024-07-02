@@ -1,1 +1,1 @@
-c:/Users/nmcal/Documents/GitHub/continuum_nathan/python/kinematics.py
+/home/cam/github/continuum_cam/python/kinematics.py
