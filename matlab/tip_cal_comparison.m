@@ -23,3 +23,5 @@ DATA_7_FILENAME = "../data/tip_cal_7.csv";
 
 rmses = [rmse_1 rmse_2 rmse_3 rmse_4 rmse_5 rmse_6 rmse_7]'
 tips = [tip_1 tip_2 tip_3 tip_4 tip_5 tip_6 tip_7]'
+
+% bingo bongo

@@ -6,12 +6,12 @@ from continuum_aurora import ContinuumAurora
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
 
-aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
+aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil, serial_port_name = "COM4")
 
 counter = 0
 start = time.time_ns()
 while counter < 40:
-    transforms = aurora.read_aurora_transforms(["0A", "0B"])
+    transforms = aurora.get_aurora_transforms(["0A", "0B"])
     t = time.time_ns()
     print(
         counter,

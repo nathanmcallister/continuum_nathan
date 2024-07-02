@@ -2,6 +2,7 @@
 import numpy as np
 import serial
 import time
+from pathlib import Path
 from continuum_arduino import ContinuumArduino
 from continuum_aurora import ContinuumAurora
 import kinematics
@@ -9,7 +10,7 @@ import kinematics
 step_size = 0.1
 loose_length = 1
 
-arduino = ContinuumArduino()
+arduino = ContinuumArduino(serial_port_name="COM3")
 
 user_input = input("Would you like to start with existing setpoints? [Y/n] ")
 
@@ -63,7 +64,7 @@ current_setpoints = arduino.dls_2_cmds(deltas)
 user_input = input("Would you like to save? [y/N] ")
 
 if user_input == "y":
-    with open("../../tools/motor_setpoints", "w") as f:
+    with open(Path(__file__).parent.parent.parent.joinpath("tools", "motor_setpoints"), "w") as f:
         for i in range(arduino.num_motors):
             if i != arduino.num_motors - 1:
                 f.write(f"{current_setpoints[i]},")
