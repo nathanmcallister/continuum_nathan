@@ -3,6 +3,7 @@ import serial
 import struct
 import math
 import time
+from pathlib import Path
 from typing import List
 
 
@@ -14,7 +15,7 @@ class ContinuumArduino:
     def __init__(
         self,
         num_motors: int = 4,
-        setpoint_filename: str = "../../tools/motor_setpoints",
+        setpoint_filename: str = Path(__file__).parent.parent.parent.joinpath("tools", "motor_setpoints"),
         wheel_radii: np.ndarray = np.array([15, 15, 15, 15], dtype=float),
         oscillator_frequency_kHz: int = 25_000,
         servo_frequency: int = 324,
@@ -295,7 +296,7 @@ class ContinuumArduino:
         self.wheel_radii = wheel_radii.astype(float)
 
     def load_motor_setpoints(
-        self, filename: str = "../tools/motor_setpoints"
+        self, filename: str = Path(__file__).parent.parent.parent.joinpath("tools", "motor_setpoints")
     ) -> np.ndarray:
         """
         Loads motor setpoints from a file.
