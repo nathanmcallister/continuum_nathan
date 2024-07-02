@@ -24,6 +24,13 @@ model = ANN.Model(
 model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
 model.model.eval()
 
+array = np.array([-12, -12, -12, -12])
+
+tensor = torch.tensor(array)
+output = model(tensor)
+# tensor([0, 0, 64, 0, 0, 0])
+output_pos = output[:3]
+
 
 def loss_fcn(
     dl: np.ndarray,

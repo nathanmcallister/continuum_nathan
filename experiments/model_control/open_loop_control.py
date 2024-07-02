@@ -9,25 +9,24 @@ from typing import List, Tuple
 import ANN
 import kinematics
 import utils_data
-import continuum_arduino
-import continuum_aurora
+from continuum_arduino import ContinuumArduino
+from continuum_aurora import ContinuumAurora
 
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
 
-wait_time = 0.1
+wait_time = 1
 repetitions = 8
 ns2s = 10 ** (-9)
-trajectory = np.loadtxt("output/trajectory.dat", delimiter=",")
-cable_trajectory = np.loadtxt("output/cable_trajectory.dat", delimiter=",")
+trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",")
+cable_trajectory = np.loadtxt("output/nathan_cable_trajectory.dat", delimiter=",")
 num_points = cable_trajectory.shape[1]
 
-aurora = continuum_aurora.init_aurora()
+aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
 probe_list = ["0A"]
-arduino = continuum_arduino.init_arduino()
+arduino = ContinuumArduino()
 
-motor_setpoints = continuum_arduino.load_motor_setpoints("../../tools/motor_setpoints")
-continuum_arduino.write_motor_vals(arduino, motor_setpoints)
+arduino.write_dls(np.zeros(4, dtype=float))
 time.sleep(2)
 
 model = ANN.Model(
@@ -45,28 +44,18 @@ for j in range(repetitions):
     for i in range(num_points):
         idx = num_points * j + i
         print(f"{idx+1} of {repetitions * num_points}")
-        dls_np = cable_trajectory[:4, i]
-        dls_list = dls_np.tolist()
-        motor_cmds = continuum_arduino.one_seg_dl_2_motor_vals(
-            dls_list, motor_setpoints
-        )
-        continuum_arduino.write_motor_vals(arduino, motor_cmds)
-        dls_tensor = torch.tensor(dls_np)
+        arduino.write_dls(cable_trajectory[:, i])
+        dls_tensor = torch.tensor(cable_trajectory[:, i])
         output_tensor = model(dls_tensor)
         model_pos[:, idx] = output_tensor[:3].detach().numpy()
         model_tang[:, idx] = output_tensor[3:].detach().numpy()
         time.sleep(wait_time)
-        trans = continuum_aurora.get_aurora_transforms(aurora, probe_list)
-        T = continuum_aurora.get_T_tip_2_model(
-            trans["0A"], T_aurora_2_model, T_tip_2_coil
-        )
+        trans = aurora.get_aurora_transforms(probe_list)
+        T = aurora.get_T_tip_2_model(trans["0A"])
         true_pos[:, idx] = T[0:3, 3]
         true_tang[:, idx] = kinematics.dcm_2_tang(T[0:3, 0:3])
 
-continuum_arduino.write_motor_vals(arduino, motor_setpoints)
-
-arduino.close()
-aurora.close()
+arduino.write_dls(np.zeros(4, dtype=float))
 
 np.savetxt("output/model_trajectory.dat", model_pos, delimiter=",")
 np.savetxt("output/true_trajectory.dat", true_pos, delimiter=",")

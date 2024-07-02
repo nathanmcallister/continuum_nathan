@@ -142,7 +142,7 @@ class ContinuumAurora:
         # Assemble payload
         payload = bytearray()
         payload.append(GET_PROBE_TFORM)  # packet type
-        payload.append(len(probe_sn_array))  # sent as uint8_t
+        payload.append(len(probe_list))  # sent as uint8_t
 
         # Add port handle string characters
         for probe_sn in probe_list:
@@ -169,7 +169,7 @@ class ContinuumAurora:
         msg.extend([DLE_BYTE, ETX_BYTE])
 
         # Write message
-        serial_port.flush()
+        self.serial_port.flush()
         self.serial_port.write(msg)
 
     def __read_aurora_packet(self, timeout: float = 1) -> bytearray:
@@ -188,7 +188,7 @@ class ContinuumAurora:
         ETX_BYTE = 0x03
         PKT_TYPE_TRANSFORM_DATA = 0x01
         message_max_size = 300
-        new_serial_data = bytearray()
+        buffer = bytearray()
         reading = False
         dle_high = False
 
@@ -197,12 +197,12 @@ class ContinuumAurora:
 
         # Keep reading data until we find the start pattern or timeout
         while not reading and (time.time() - start_time) < timeout:
-            value = self.serial_port.read()
+            buffer += self.serial_port.read()
             if not dle_high:
-                if value == DLE_BYTE:
+                if buffer[-1] == DLE_BYTE:
                     dle_high = True
             else:
-                if value == STX_BYTE:
+                if buffer[-1] == STX_BYTE:
                     reading = True
                 dle_high = False
 

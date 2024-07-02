@@ -13,7 +13,7 @@ def generate_babble_data(
     segment_stiffness_vals: List[Tuple[float, ...]],
     cable_stiffness_vals: List[Tuple[float, ...]],
     segment_lengths: List[float],
-    num_measurements: int = 2**14,
+    num_measurements: int = 2**16,
     cable_range: float = 12,
     pos_noise_std: float = 0.5,
     tang_noise_std: float = 0.05,

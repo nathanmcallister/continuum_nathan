@@ -305,6 +305,7 @@ class Dataset(Dataset):
     """
     Houses data for training.  Built on top of DataContainer class from utils_data
     """
+
     def __init__(self, filename: str = None):
         """
         Creates an empty Dataset object, and imports from a file if it is given
@@ -387,8 +388,12 @@ class Dataset(Dataset):
         """
         assert len(inputs) == len(outputs), "Input and output must be same length"
         for input, output in zip(inputs, outputs):
-            assert len(input) == num_cables, "All inputs must match the number of cables"
-            assert len(output) == 6 * num_coils, "All outputs must match the number of coils * 6 (3 position and 3 orientation measurements)"
+            assert (
+                len(input) == num_cables
+            ), "All inputs must match the number of cables"
+            assert (
+                len(output) == 6 * num_coils
+            ), "All outputs must match the number of coils * 6 (3 position and 3 orientation measurements)"
 
         self.date = date
         self.time = time
@@ -420,9 +425,15 @@ class Dataset(Dataset):
             outputs: Pose data
         """
 
-        assert inputs.shape[1] == outputs.shape[1], "Make sure there are the same number of measurements"
-        assert inputs.shape[0] == num_cables, "Ensure input size matches number of cables"
-        assert outputs.shape[0] == 6 * num_coils, "Ensure output size matches number of measurements from coils"
+        assert (
+            inputs.shape[1] == outputs.shape[1]
+        ), "Make sure there are the same number of measurements"
+        assert (
+            inputs.shape[0] == num_cables
+        ), "Ensure input size matches number of cables"
+        assert (
+            outputs.shape[0] == 6 * num_coils
+        ), "Ensure output size matches number of measurements from coils"
 
         self.date = date
         self.time = time
@@ -431,8 +442,14 @@ class Dataset(Dataset):
         self.num_measurements = len(inputs)
 
         # Converts numpy arrays to lists of tensors
-        self.inputs = [torch.from_numpy(inputs[:, i]).to(self.device) for i in range(self.num_measurements)]
-        self.outputs = [torch.from_numpy(outputs[:, i]).to(self.device) for i in range(self.num_measurements)]
+        self.inputs = [
+            torch.from_numpy(inputs[:, i]).to(self.device)
+            for i in range(self.num_measurements)
+        ]
+        self.outputs = [
+            torch.from_numpy(outputs[:, i]).to(self.device)
+            for i in range(self.num_measurements)
+        ]
 
     def __len__(self) -> int:
         """
@@ -537,10 +554,10 @@ class PoseLoss(nn.Module):
         Returns:
             Loss
         """
-        expanded_weights = self.weights.expand(input.size(0), -1)
+        expanded_weights = self.weights.expand(pred.size(0), -1)
 
         return nn.functional.mse_loss(
-            input * expanded_weights, target * expanded_weights
+            pred * expanded_weights, target * expanded_weights
         )
 
 
@@ -555,7 +572,7 @@ class PositionLoss(nn.Module):
         """
         super(PositionLoss, self).__init__()
 
-    def forward(self, input, target):
+    def forward(self, pred, target):
         """
         Calculates loss
 
@@ -566,7 +583,7 @@ class PositionLoss(nn.Module):
         Returns:
             Loss
         """
-        return torch.sqrt(nn.functional.mse_loss(input[:, :3], target[:, :3]) * 3)
+        return torch.sqrt(nn.functional.mse_loss(pred[:, :3], target[:, :3]) * 3)
 
 
 class OrientationLoss(nn.Module):
@@ -591,4 +608,4 @@ class OrientationLoss(nn.Module):
         Returns:
             Loss
         """
-        return torch.sqrt(nn.functional.mse_loss(input[:, 3:], target[:, 3:]) * 3)
+        return torch.sqrt(nn.functional.mse_loss(pred[:, 3:], target[:, 3:]) * 3)

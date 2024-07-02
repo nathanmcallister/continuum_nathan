@@ -84,7 +84,9 @@ class ContinuumAurora:
 
         return output
 
-    def read_aurora_transforms(self, probe_list: List[str], timeout: float = 1, attempts: int = 5) -> Dict[str, List[float]]:
+    def read_aurora_transforms(
+        self, probe_list: List[str], timeout: float = 1, attempts: int = 5
+    ) -> Dict[str, List[float]]:
         """
         Reads the raw transforms of the probes in probe_list from an Aurora data stream.
 
@@ -143,7 +145,7 @@ class ContinuumAurora:
 
     def crc_add_bytes(self, CRC: int, payload: bytearray):
         """
-        Calculates a CRC checksum given a bytearray.
+        Calculates a CRC-8 checksum given a bytearray.
 
         Args:
             CRC: Starting CRC value (Set to 0 for transmission)

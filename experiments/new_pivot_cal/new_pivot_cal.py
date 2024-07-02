@@ -6,8 +6,8 @@ import kinematics
 from utils_data import parse_aurora_csv
 from typing import List
 
-axis_file = "../../data/tip_cals/tip_cal_06_26_24c.csv"
-pivot_file = "../../data/tip_cals/tip_cal_06_26_24b.csv"
+axis_file = "../../data/tip_cals/tip_cal_07_02_24i.csv"
+pivot_file = "../../data/tip_cals/tip_cal_06_26_24a.csv"
 
 axis_transforms = parse_aurora_csv(axis_file)
 positions = np.nan * np.zeros((3, len(axis_transforms["0A"])))
@@ -46,15 +46,24 @@ def optim_function(
 
 
 x0 = np.concatenate([np.array([1], dtype=float), centroid])
-print(
-    opt.minimize(
-        lambda x: optim_function(x, positions, normal_vectors), x0, method="BFGS"
-    )
+res = opt.minimize(
+    lambda x: optim_function(x, positions, normal_vectors), x0, method="BFGS"
+)
+print(res)
+
+r = res["x"][0]
+xc = res["x"][1:]
+theta = np.linspace(0, 2 * np.pi, 65).reshape((1, -1))
+circle = (
+    normal_vectors[0].reshape((3, 1)) @ np.cos(theta)
+    + normal_vectors[1].reshape((3, 1)) @ np.sin(theta)
+    + xc.reshape((3, 1))
 )
 
-
 ax = plt.figure().add_subplot(projection="3d")
-ax.plot(positions[0, :], positions[1, :], positions[2, :], "o")
+ax.plot(positions[0, :], positions[1, :], positions[2, :])
+# ax.plot(circle[0, :], circle[1, :], circle[2, :])
+"""
 for idx, vector in enumerate(normal_vectors):
     ax.quiver(
         centroid[0],
@@ -63,11 +72,16 @@ for idx, vector in enumerate(normal_vectors):
         vector[0],
         vector[1],
         vector[2],
-        color=f"C{idx+1}",
+        color=f"C{idx+2}",
     )
+"""
 ax.set_box_aspect(
     (np.ptp(positions[0, :]), np.ptp(positions[1, :]), np.ptp(positions[2, :]))
 )
+plt.title("Penprobe Axis Calibration")
+plt.xlabel("x (mm)")
+plt.ylabel("y (mm)")
+ax.set_zlabel("z (mm)")
 plt.show()
 
 pivot_transforms = parse_aurora_csv(pivot_file)

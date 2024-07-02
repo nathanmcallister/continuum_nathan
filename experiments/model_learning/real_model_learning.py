@@ -16,30 +16,19 @@ import kinematics
 TRAINING_ITERATIONS = 2
 
 # Input filenames
-old_data_filename = "training_data/kinematic_2024_05_09_20_11_13.dat"
 data_filename = "training_data/kinematic_2024_05_28_01_22_07.dat"
 
 # Data loading
-old_container = utils_data.DataContainer()
-old_container.file_import(old_data_filename)
-container = utils_data.DataContainer()
-container.file_import(data_filename)
-
-dataset = ANN.Dataset()
-dataset.load_from_DataContainer(container)
+dataset = ANN.Dataset(data_filename)
+old_length = len(dataset)
 dataset.clean()
-old_dataset = ANN.Dataset()
-old_dataset.load_from_DataContainer(old_container)
-old_dataset.clean()
-dataset = torch.utils.data.ConcatDataset([dataset, old_dataset])
-print(f"Removed {2**15 - len(dataset)} faulty measurements from dataset")
+print(f"Removed {old_length - len(dataset)} faulty measurements from dataset")
 
 
 def train():
     now = datetime.datetime.now()
     save_dir = f"models/{now.year}_{now.month:02n}_{now.day:02n}_{now.hour:02n}_{now.minute:02n}_{now.second:02n}/"
     # Training
-    # Clean one seg
     split_datasets = torch.utils.data.random_split(dataset, [0.75, 0.25])
     train_dataloader = DataLoader(split_datasets[0], batch_size=64)
     validation_dataloader = DataLoader(split_datasets[1], batch_size=64)

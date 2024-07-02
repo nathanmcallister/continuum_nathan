@@ -30,9 +30,7 @@ class Model(nn.Module):
         self.device = (
             "cuda"
             if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
+            else "mps" if torch.backends.mps.is_available() else "cpu"
         )
         print(f"Using {self.device} device")
 
@@ -137,9 +135,7 @@ class Model(nn.Module):
         test_loss = []
 
         for epoch in range(num_epochs):
-            print(
-                f"Epoch {epoch+1}\n-------------------------------", flush=True
-            )
+            print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
             train_loss.append(self.train_epoch(train_dataloader))
 
             if test_dataloader:
@@ -169,23 +165,21 @@ class Model(nn.Module):
         )
 
         y_narx = np.zeros(observations.shape, dtype=float)
-        y_narx[:, 0: num_previous_frames + 1] = observations[
-            :, 0: num_previous_frames + 1
+        y_narx[:, 0 : num_previous_frames + 1] = observations[
+            :, 0 : num_previous_frames + 1
         ]
 
         with torch.no_grad():
             for i in range(num_previous_frames + 1, observations.shape[1]):
                 observation_sub_array = y_narx[
-                    :, i - self.num_previous_observations - 1: i
+                    :, i - self.num_previous_observations - 1 : i
                 ]
                 if self.include_current_action:
                     action_sub_array = input[
-                        :, i - self.num_previous_actions - 1: i + 1
+                        :, i - self.num_previous_actions - 1 : i + 1
                     ]
                 else:
-                    action_sub_array = input[
-                        :, i - self.num_previous_actions - 1: i
-                    ]
+                    action_sub_array = input[:, i - self.num_previous_actions - 1 : i]
 
                 input_tensor = torch.as_tensor(
                     np.concatenate(
@@ -235,14 +229,12 @@ class Dataset(Dataset):
             num_observations,
         ):
             frame_observations = observations[
-                :, (i - 1 - num_previous_observations): i
+                :, (i - 1 - num_previous_observations) : i
             ]
             if include_current_action:
-                frame_actions = actions[
-                    :, (i - 1 - num_previous_actions): i + 1
-                ]
+                frame_actions = actions[:, (i - 1 - num_previous_actions) : i + 1]
             else:
-                frame_actions = actions[:, (i - 1 - num_previous_actions): i]
+                frame_actions = actions[:, (i - 1 - num_previous_actions) : i]
 
             frame_input = np.concatenate(
                 [

@@ -61,18 +61,3 @@ for i in range(num_meas):
 # ax = plt.figure().add_subplot(projection="3d")
 # ax.plot(coil_pos[0, :], coil_pos[1, :], coil_pos[2, :], "o")
 # plt.show()
-
-A = np.zeros((3 * num_meas, 6))
-b = np.zeros((3 * num_meas))
-
-for i in range(num_meas):
-    A[3 * i : 3 * (i + 1), :] = np.concatenate(
-        [kinematics.quat_2_dcm(coil_quat[:, i]), -np.identity(3)], axis=1
-    )
-    b[3 * i : 3 * (i + 1)] = -coil_pos[:, i]
-
-out = np.linalg.lstsq(A, b, rcond=None)
-
-print(np.linalg.inv(T_coil_2_tip))
-print(T_tip_2_aurora)
-print(out)

@@ -14,7 +14,7 @@ class DataContainer:
     num_measurements: int = None
     inputs: List[np.ndarray] = field(default_factory=list)
     outputs: List[np.ndarray] = field(default_factory=list)
-    num_auroras: int = 1
+    num_coils: int = 1
     prefix: str = "data"
 
     def file_export(self, filename: str = None):
@@ -28,7 +28,7 @@ class DataContainer:
             file.write(f"DATE: {self.date[0]}-{self.date[1]}-{self.date[2]}\n")
             file.write(f"TIME: {self.time[0]}-{self.time[1]}-{self.time[2]}\n")
             file.write(f"NUM_CABLES: {self.num_cables}\n")
-            file.write(f"NUM_AURORAS: {self.num_auroras}\n")
+            file.write(f"num_coils: {self.num_coils}\n")
             file.write(f"NUM_MEASUREMENTS: {self.num_measurements}\n")
             file.write("---\n")
 
@@ -64,9 +64,9 @@ class DataContainer:
             num_cables_line = file.readline()
             self.num_cables = int(num_cables_line.split(":")[1])
 
-            num_auroras_line = file.readline()
-            num_auroras_list = num_auroras_line.split(":")
-            self.num_auroras = int(num_auroras_list[1])
+            num_coils_line = file.readline()
+            num_coils_list = num_coils_line.split(":")
+            self.num_coils = int(num_coils_list[1])
 
             num_measurements_line = file.readline()
             num_measurements_list = num_measurements_line.split(":")
@@ -77,7 +77,7 @@ class DataContainer:
             spacer = file.readline()
             assert spacer.strip() == "---"
 
-            num_outputs = 6 * self.num_auroras
+            num_outputs = 6 * self.num_coils
 
             while line := file.readline():
                 row = line.split(",")
@@ -105,23 +105,23 @@ class DataContainer:
         cable_deltas: np.ndarray,
         positions: np.ndarray,
         orientations: np.ndarray,
-        num_auroras: int = 1,
+        num_coils: int = 1,
     ):
         assert cable_deltas.shape == (num_cables, num_measurements)
-        assert positions.shape == (3 * num_auroras, num_measurements)
-        assert orientations.shape == (3 * num_auroras, num_measurements)
+        assert positions.shape == (3 * num_coils, num_measurements)
+        assert orientations.shape == (3 * num_coils, num_measurements)
 
         self.date = date
         self.time = time
         self.num_cables = num_cables
         self.num_measurements = num_measurements
-        self.num_auroras = num_auroras
+        self.num_coils = num_coils
 
         self.inputs = []
         self.outputs = []
 
         input_size = num_cables
-        output_size = num_auroras * 6
+        output_size = num_coils * 6
 
         for i in range(num_measurements):
             self.inputs.append(cable_deltas[:, i].flatten())
