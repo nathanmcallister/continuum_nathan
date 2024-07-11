@@ -6,8 +6,8 @@ import kinematics
 from utils_data import parse_aurora_csv
 from typing import List
 
-axis_file = "../../data/tip_cals/tip_cal_07_02_24i.csv"
-pivot_file = "../../data/tip_cals/tip_cal_06_26_24a.csv"
+axis_file = "../../data/tip_cals/tip_cal_07_03_24c.csv"
+pivot_file = "../../data/tip_cals/tip_cal_07_03_24b.csv"
 
 axis_transforms = parse_aurora_csv(axis_file)
 positions = np.nan * np.zeros((3, len(axis_transforms["0A"])))

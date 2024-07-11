@@ -5,8 +5,8 @@ import kinematics
 import utils_data
 
 # Parameters
-REG_FILE = "../data/regs/reg_05_27_24b.csv"
-TIP_FILE = "../tools/penprobe_04_20_24a"
+REG_FILE = "../data/regs/reg_07_03_24a.csv"
+TIP_FILE = "../tools/penprobe_07_03_24i"
 output = True
 num_repetitions = 5
 
@@ -75,10 +75,10 @@ tip_meas_in_tip, T_aurora_2_tip, fre["aurora_2_tip"] = kinematics.rigid_align_sv
 
 # Get average coil transform
 coil_qs = np.concatenate(
-    [transform[0] for transform in aurora_transforms["0B"]], axis=1
+    [transform[0].reshape((4, 1)) for transform in aurora_transforms["0B"]], axis=1
 )
 coil_ts = np.concatenate(
-    [transform[1] for transform in aurora_transforms["0B"]], axis=1
+    [transform[1].reshape((3, 1)) for transform in aurora_transforms["0B"]], axis=1
 )
 
 q_mean = coil_qs.mean(axis=1)

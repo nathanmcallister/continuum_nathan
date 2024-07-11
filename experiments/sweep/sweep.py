@@ -8,12 +8,13 @@ import utils_data
 
 max_displacement = 12
 angular_steps = 128
-wait = 4
+repetitions = 8
+wait = 0.5
 
 T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
 
-phi = (np.arange(0, angular_steps) * 2 * np.pi / angular_steps).reshape((1, -1))
+phi = -(np.arange(0, angular_steps) * 2 * np.pi / angular_steps).reshape((1, -1))
 
 dls = -max_displacement * np.concatenate(
     [np.cos(phi), np.sin(phi), -np.cos(phi), -np.sin(phi)], axis=0
@@ -22,16 +23,22 @@ dls = -max_displacement * np.concatenate(
 arduino = ContinuumArduino()
 aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
 
-positions = np.nan * np.zeros((3, angular_steps))
+positions = np.nan * np.zeros((3, repetitions * angular_steps))
 
 arduino.write_dls(np.zeros(4))
 time.sleep(wait)
+for i in range(repetitions):
+    for j in range(angular_steps):
+        print(
+            f"Repetition {i+1}/{repetitions}, Step {j+1:03}/{angular_steps}", end="\r"
+        )
+        arduino.write_dls(dls[:, j])
+        time.sleep(wait)
+        transforms = aurora.get_aurora_transforms(["0A"])
+        T_tip_2_model = aurora.get_T_tip_2_model(transforms["0A"])
+        idx = angular_steps * i + j
+        positions[:, idx] = T_tip_2_model[:3, 3]
 
-for i in range(angular_steps):
-    arduino.write_dls(dls[:, i])
-    time.sleep(wait)
-    transforms = aurora.get_aurora_transforms(["0A"])
-    T_tip_2_model = aurora.get_T_tip_2_model(transforms["0A"])
-    positions[:, i] = T_tip_2_model[:3, 3]
-
-np.savetxt("output/max_sweep.dat", delimiter=",")
+arduino.write_dls(np.zeros(4))
+print()
+np.savetxt("output/multi_sweep_backwards.dat", positions, delimiter=",")

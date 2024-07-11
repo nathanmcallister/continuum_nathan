@@ -1,8 +1,160 @@
 import numpy as np
 import ipyopt
+from scipy.optimize import minimize, Bounds, LinearConstraint
 from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
 from utils_cc import *
+
+
+class CamarilloSpine:
+
+    def __init__(
+        self,
+        cable_positions: List[Tuple[Tuple[float, ...], ...]],
+        segment_stiffness_vals: List[Tuple[float, ...]],
+        cable_stiffness_vals: List[Tuple[float, ...]],
+        segment_lengths: List[float],
+        additional_cable_length: float,
+    ):
+        assert (
+            len(cable_positions)
+            == len(segment_stiffness_vals)
+            == len(cable_stiffness_vals)
+            == len(segment_lengths)
+        )
+        self.num_segments = len(cable_positions)
+        self.cables_per_segment = [-1] * self.num_segments
+
+        # Ensure number of cables per segment is consistent, segment_stiffness_vals is correct shape, and cable_positions is correct shape
+        for segment_num in range(self.num_segments):
+            assert len(cable_positions[segment_num]) == len(
+                cable_stiffness_vals[segment_num]
+            ), "Number of cables in segment {} is inconsistent".format(segment_num)
+            assert (
+                len(segment_stiffness_vals[segment_num]) == 2
+            ), "Length of segment_stiffness_vals in segment {} is not 2".format(
+                segment_num
+            )
+
+            num_cables = len(cable_positions[segment_num])
+            self.cables_per_segment[segment_num] = num_cables
+
+            for cable_num in range(num_cables):
+                assert (
+                    len(cable_positions[segment_num][cable_num]) == 2
+                ), "len(cable_positions) in segment {} at cable {} != 2".format(
+                    segment_num, cable_num
+                )
+        self.num_cables = sum(self.cables_per_segment)
+        self.cable_positions = cable_positions
+        self.segment_stiffness_vals = segment_stiffness_vals
+        self.cable_stiffness_vals = cable_stiffness_vals
+        self.segment_lengths = segment_lengths
+        self.additional_cable_length = additional_cable_length
+
+        D, K_m_inv, L_0, L_t, K_t_inv = self.__get_camarillo_matrices()
+        self.C_m = np.matmul(
+            np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
+        ) + np.matmul(L_t, K_t_inv)
+
+        self.C_m_inv = np.linalg.inv(self.C_m)
+        self.C_m_inv_trans = np.transpose(self.C_m_inv)
+
+        self.A = np.matmul(np.matmul(K_m_inv, D), self.C_m_inv)
+        self.A_inv = np.linalg.pinv(self.A)
+
+    def forward(self, dls: np.ndarray, handle_slack: bool = False) -> np.ndarray:
+        assert len(dls) == self.num_cables
+
+        if handle_slack:
+            raise NotImplemented
+
+            def min_fcn(delta, dls):
+                return delta @ self.C_m_inv @ (delta + dls)
+
+            def min_der(delta, dls):
+                return self.C_m_inv @ (dls + delta) + self.C_m_inv_trans @ delta
+
+            def min_hess(delta):
+                return self.C_m_inv + self.C_m_inv_trans
+
+        else:
+            return self.A @ dls
+
+    def __get_camarillo_matrices(self):
+
+        # Initialization of matrices and lists for equation
+        K_m_inv_diag_list = [-1] * 3 * self.num_segments
+        D_matrix_list = []
+        L_0_diag_list = [-1] * 3 * self.num_segments
+        L_t_diag_list = [-1] * sum(self.cables_per_segment)
+        K_t_inv_diag_list = [-1] * sum(self.cables_per_segment)
+
+        # Loop through segments
+        for segment_num in range(self.num_segments):
+            # Set stiffness from inputted stiffness values
+            K_m_inv_diag_list[3 * segment_num : 3 * segment_num + 3] = [
+                1 / self.segment_stiffness_vals[segment_num][1],
+                1 / self.segment_stiffness_vals[segment_num][1],
+                1 / self.segment_stiffness_vals[segment_num][0],
+            ]
+
+            # Form D matrix for segment
+            row_1 = np.array(
+                [position[0] for position in self.cable_positions[segment_num]],
+                dtype=float,
+            ).reshape((1, -1))
+            row_2 = np.array(
+                [position[1] for position in self.cable_positions[segment_num]],
+                dtype=float,
+            ).reshape((1, -1))
+            row_3 = np.ones((1, self.cables_per_segment[segment_num]), dtype=float)
+
+            D = np.concatenate([row_1, row_2, row_3], axis=0)
+
+            D_matrix_list.append(D)
+
+            # Form L0 diagonal matrix list
+            L_0_diag_list[3 * segment_num : 3 * segment_num + 3] = [
+                self.segment_lengths[segment_num]
+            ] * 3
+
+            # Form Lt diagonal matrix list
+            cables_so_far = sum(self.cables_per_segment[:segment_num])
+            num_cables = self.cables_per_segment[segment_num]
+            L_t_diag_list[cables_so_far : cables_so_far + num_cables] = [
+                self.additional_cable_length
+                + sum(self.segment_lengths[: segment_num + 1])
+            ] * num_cables
+
+            # Form Kt^-1 diagonal matrix list
+            K_t_inv_diag_list[cables_so_far : cables_so_far + num_cables] = [
+                1 / x for x in self.cable_stiffness_vals[segment_num]
+            ]
+
+        # Form stiffness matrix
+        K_m_inv = np.diag(np.array(K_m_inv_diag_list, dtype=float))
+
+        # Form L0 matrix
+        L_0 = np.diag(np.array(L_0_diag_list, dtype=float))
+
+        # Form Lt matrix
+        L_t = np.diag(np.array(L_t_diag_list, dtype=float))
+
+        # Form Kt^-1 matrix
+        K_t_inv = np.diag(np.array(K_t_inv_diag_list, dtype=float))
+
+        # Form D matrix
+        D = np.zeros((3 * self.num_segments, sum(self.cables_per_segment)), dtype=float)
+        for i in range(self.num_segments):
+            for segment_num in range(i, self.num_segments):
+                cables_so_far = sum(self.cables_per_segment[:segment_num])
+                num_cables = self.cables_per_segment[segment_num]
+                D[3 * i : 3 * i + 3, cables_so_far : cables_so_far + num_cables] = (
+                    D_matrix_list[segment_num]
+                )
+
+        return D, K_m_inv, L_0, L_t, K_t_inv
 
 
 def get_camarillo_matrices(

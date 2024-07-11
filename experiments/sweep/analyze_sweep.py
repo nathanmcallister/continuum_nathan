@@ -3,53 +3,44 @@ import numpy as np
 import matplotlib.pyplot as plt
 import utils_data
 
-container = utils_data.DataContainer()
-container.file_import("output/data_2024_05_21_14_57_12.dat")
-cable_deltas, pos, tang = container.to_numpy()
+from pyplot_units import radians, degrees
 
-phi_desired = np.arctan2(cable_deltas[3, :], cable_deltas[2, :])
-phi_meas = np.arctan2(pos[1, :], pos[0, :])
 
-good_idx = [3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
+multi_positions = np.loadtxt("output/multi_sweep.dat", delimiter=",")
+center = multi_positions.mean(axis=1)
+angular_steps = 128
+positions = np.zeros((3, angular_steps))
+for i in range(angular_steps):
+    positions[:, i] = multi_positions[:, i::angular_steps].mean(axis=1)
 
-num_loops = int(len(phi_meas) / 32)
-error = np.zeros((num_loops, 32))
-for i in range(num_loops):
-    error[i, :] = np.unwrap(phi_meas[32 * i : 32 * (i + 1)]) - np.unwrap(
-        phi_desired[32 * i : 32 * (i + 1)]
-    )
-
-avg_error = error[good_idx, :].mean(axis=0)
-avg_std = np.std(error[good_idx, :], axis=0, ddof=1)
+phi = np.arange(angular_steps) * 2 * np.pi / angular_steps
+measured_phi = np.unwrap(
+    np.arctan2(positions[1, :] - center[1], positions[0, :] - center[0])
+)
 
 plt.figure()
-plt.plot(180 / np.pi * phi_desired)
-plt.plot(180 / np.pi * phi_meas)
-plt.title("Measured and Desired Angle by Measurement")
-plt.xlabel("Measurement")
+plt.plot(multi_positions[0, :], multi_positions[1, :])
+plt.plot(positions[0, :], positions[1, :])
+plt.title("X-Y Projection of Measured Positions")
+plt.xlabel("x (mm)")
+plt.ylabel("y (mm)")
+
+fig, ax = plt.subplots(1)
+ax.plot(phi * radians, phi * radians, xunits=degrees, yunits=degrees)
+ax.plot(phi * radians, measured_phi * radians, xunits=degrees, yunits=degrees)
+plt.title("Commanded and Measured Angle")
+plt.xlabel("Commanded Angle (degrees)")
 plt.ylabel("Angle (degrees)")
-plt.legend(["Desired Angle", "Measured Angle"], loc="upper right")
+plt.legend(["Commanded Angle", "Measured Angle"])
 
 plt.figure()
-plt.plot(
-    180 / np.pi * np.unwrap(phi_desired[:32]),
-    180 / np.pi * avg_error,
-    label="Mean Angular Error",
-)
-plt.fill_between(
-    180 / np.pi * np.unwrap(phi_desired[:32]),
-    180 / np.pi * (avg_error - avg_std),
-    180 / np.pi * (avg_error + avg_std),
-    alpha=0.3,
-    label="_Angular Error Std",
-)
-plt.plot(
-    [0, 0, np.nan, 90, 90, np.nan, 180, 180, np.nan, 270, 270, np.nan, 360, 360],
-    [-45, 45, np.nan, -45, 45, np.nan, -45, 45, np.nan, -45, 45, np.nan, -45, 45],
-    label="Cable Axes",
-)
-plt.legend(loc="upper right")
-plt.title("Angular Error vs Desired Angle")
-plt.xlabel("Desired Angle (degrees)")
-plt.ylabel("Angular Error (degrees)")
+plt.plot(phi * radians, positions[2, :], xunits=degrees)
+plt.title("Z Position vs Commanded Angle")
+plt.xlabel("Commanded Angle (degrees)")
+plt.ylabel("z (mm)")
+
+ax = plt.figure().add_subplot(projection="polar")
+ax.plot(phi, np.abs(measured_phi - phi) * radians, yunits=degrees)
+plt.ylabel("")
+plt.title("Angular Error Norm vs Commanded Angle")
 plt.show()

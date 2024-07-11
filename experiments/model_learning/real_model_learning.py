@@ -16,7 +16,7 @@ import kinematics
 TRAINING_ITERATIONS = 2
 
 # Input filenames
-data_filename = "training_data/kinematic_2024_05_28_01_22_07.dat"
+data_filename = "../motor_babble/output/kinematic_2024_07_03_16_58_17.dat"
 
 # Data loading
 dataset = ANN.Dataset(data_filename)

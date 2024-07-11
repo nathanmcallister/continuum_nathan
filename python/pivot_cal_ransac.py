@@ -5,11 +5,45 @@ from typing import Tuple
 from kinematics import quat_2_dcm
 from utils_data import parse_aurora_csv
 
+"""
+pivot_cal_ransac
+Cameron Wolfe 07/03/2024
+
+Performs Algebraic One Step pivot calibration with RANSAC outlier rejection.
+
+RANSAC (Random Sample Consensus) works by performing pivot calibration on a small
+subset of the data.  This is then tested on the rest of the dataset to determine
+how well the new penprobe fits the rest of the data.  If the error is below a
+threshold, it is added to the set of points the model fits.  After going through
+all of the points, if a large portion of the dataset fits, then this is considered
+a valid penprobe, and it is saved.  The best valid penprobe (lowest RMSE) is found
+by iterating this process many times.
+
+Useful resources:
+Which pivot calibration? paper: https://doi.org/10.1117/12.2081348
+RANSAC overview: https://www.baeldung.com/cs/ransac
+"""
+
 # Parameters
-pivot_filename = "../data/tip_cals/tip_cal_07_02_24a.csv"
-std_threshold = 3
+pivot_filename = "../data/tip_cals/tip_cal_07_03_24i.csv"
+output_filename = "../tools/penprobe_07_03_24i"
 show_plots = True
-output_filename = "../tools/penprobe_07_02_24a"
+
+# RANSAC parameters
+p_outlier_in_subset = 0.01  # Used for estimating number of iterations
+p_outlier_in_data = 0.05  # Used for estimating number of iterations
+error_threshold = 0.75  # (mm) Considered a good point if error is below threshold
+good_fit_threshold = 0.75  # If we this percentage of the points, its a good fit
+subset_size = 100  # Starting random subset size
+
+ransac_iterations = int(
+    np.ceil(
+        np.log(p_outlier_in_subset) / np.log(1 - (1 - p_outlier_in_data) ** subset_size)
+    )
+)
+
+num_digits = int(np.ceil(np.log10(ransac_iterations + 1)))
+print(f"Number of RANSAC iterations: {ransac_iterations}")
 
 
 # Local functions
@@ -90,41 +124,86 @@ for i in range(num_meas):
     coil_pos[:, i] = aurora_data[i][1]
 
 
-# Iterate to remove outliers (greater than 3 standard deviations above mean error)
-previous_length = np.inf
-current_length = coil_quat.shape[1]
-rmse = np.inf
-iteration = 1
+# RANSAC algorithm
+def ransac(ransac_iterations, subset_size, error_threshold, good_fit_threshold):
+    best_penprobe = np.nan * np.zeros(3)
+    best_pivot = np.nan * np.zeros(3)
+    best_rmse = np.inf
+    for i in range(ransac_iterations):
 
-while previous_length != current_length:
-    previous_length = current_length
+        # Get random subset
+        subset = np.random.choice(num_meas, subset_size, replace=False)
+        outside_subset = np.setdiff1d(np.arange(num_meas), subset)
 
-    penprobe, pivot = solve_system(coil_quat, coil_pos)
+        # Find penprobe on random subset
+        penprobe, pivot = solve_system(coil_quat[:, subset], coil_pos[:, subset])
 
-    # Perform error calculations
-    error = get_error(coil_quat, coil_pos, penprobe, pivot)
-    mean_error = error.mean()
-    error_std = np.std(error)
-    rmse = np.sqrt(np.mean(error**2))
+        # Test points outside of subset
+        error = get_error(
+            coil_quat[:, outside_subset], coil_pos[:, outside_subset], penprobe, pivot
+        )
 
-    print(f"Iteration {iteration} RMSE: {rmse.item():.3f}")
+        # Get points that model fits
+        inside_subset = outside_subset[error < error_threshold]
 
-    # Find points that are within threshold
-    good_measurements = error - mean_error < std_threshold * error_std
+        # Valid fit
+        if len(inside_subset) + len(subset) >= good_fit_threshold * num_meas:
 
-    # Update coil_quat and pos
-    coil_quat = coil_quat[:, good_measurements]
-    coil_pos = coil_pos[:, good_measurements]
+            # Collect all points that fit the model into one set
+            new_subset = np.concatenate((subset, inside_subset))
 
-    current_length = coil_quat.shape[1]
-    iteration += 1
+            # Find penprobe on larger set
+            penprobe, pivot = solve_system(
+                coil_quat[:, new_subset], coil_pos[:, new_subset]
+            )
 
-# Save file
+            # Test fit
+            error = get_error(
+                coil_quat[:, new_subset], coil_pos[:, new_subset], penprobe, pivot
+            )
+
+            rmse = np.sqrt(np.mean(error**2))
+
+            # Update if best fit
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_penprobe = penprobe
+                best_pivot = pivot
+
+        # Printing
+        if i != ransac_iterations - 1:
+            print(
+                f"RANSAC iteration {i + 1:0{num_digits}}/{ransac_iterations}: {best_rmse:.4f} mm RMSE",
+                end="\r",
+            )
+        else:
+            print(
+                f"RANSAC iteration {i + 1:0{num_digits}}/{ransac_iterations}: {best_rmse:.4f} mm RMSE",
+            )
+
+    if not np.isnan(best_penprobe).any():
+        return best_penprobe, best_pivot
+    else:
+        print("RANSAC did not converge with current thresholds, relaxing thresholds.")
+        return ransac(
+            ransac_iterations,
+            subset_size,
+            error_threshold + 0.25,
+            good_fit_threshold,
+        )
+
+
+penprobe, pivot = ransac(
+    ransac_iterations, subset_size, error_threshold, good_fit_threshold
+)
 np.savetxt(output_filename, penprobe, delimiter=",")
-
+print(penprobe)
 
 # Plotting
 if show_plots:
+
+    error = get_error(coil_quat, coil_pos, penprobe, pivot)
+    rmse = np.sqrt(np.mean(error**2))
 
     def error_2_color(
         error: float,

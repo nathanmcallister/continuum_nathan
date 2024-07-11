@@ -223,7 +223,9 @@ def penprobe_transform(
     tip_pos = np.nan * np.zeros((3, n))
     for i in range(n):
         R = quat_2_dcm(aurora_transforms[i][0])
-        tip_pos[:, i] = (R @ penprobe + aurora_transforms[i][1]).flatten()
+        tip_pos[:, i] = (
+            R @ penprobe + aurora_transforms[i][1].reshape((3, 1))
+        ).flatten()
 
     return tip_pos
 
