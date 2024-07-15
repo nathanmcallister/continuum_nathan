@@ -21,7 +21,7 @@ class ContinuumArduino:
         wheel_radii: np.ndarray = np.array([15, 15, 15, 15], dtype=float),
         oscillator_frequency_kHz: int = 25_000,
         servo_frequency: int = 324,
-        serial_port_name: str = "/dev/ttyACM0",
+        serial_port_name: str = "Com3",
         timeout: float = 1.0,
         testing: bool = False,
     ):
@@ -594,7 +594,7 @@ compatibility with older scripts.
 
 # Initialize Arduino serial port
 def init_arduino():
-    return serial.Serial("/dev/ttyACM0", 115200, timeout=1)
+    return serial.Serial("COM3", 115200, timeout=1)
 
 
 # write motor values (commands)

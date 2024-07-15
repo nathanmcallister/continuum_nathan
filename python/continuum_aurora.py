@@ -20,7 +20,7 @@ class ContinuumAurora:
         self,
         T_aurora_2_model: np.ndarray,
         T_tip_2_coil: np.ndarray,
-        serial_port_name: str = "/dev/ttyUSB0",
+        serial_port_name: str = "COM5",
         timeout: float = 1,
     ):
         """
@@ -386,7 +386,7 @@ The following functions are deprecated, but are kept for old scripts
 
 def init_aurora():
     return serial.Serial(
-        "/dev/ttyUSB0",
+        "COM5",
         115200,
         bytesize=serial.EIGHTBITS,
         parity=serial.PARITY_NONE,
