@@ -3,19 +3,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import kinematics
 import utils_data
+from pathlib import Path
+
+# File path definition
+continuum_name = Path(__file__).parent.parent
 
 # Parameters
-REG_FILE = "../data/regs/reg_07_03_24a.csv"
-TIP_FILE = "../tools/penprobe_07_03_24i"
+REG_FILE = continuum_name.joinpath("data", "regs", "reg_07_15_24c.csv")
+TIP_FILE = continuum_name.joinpath("tools", "penprobe_07_03_24i")
 output = True
 num_repetitions = 5
 
 # Setup
 # Truth filenames
-SW_MODEL_POS_FILE = "../tools/12_model_registration_points_in_sw"
-SW_TIP_POS_FILE = "../tools/all_tip_registration_points_in_sw"
-T_SW_2_MODEL_FILE = "../tools/T_sw_2_model"
-T_SW_2_TIP_FILE = "../tools/T_sw_2_tip"
+SW_MODEL_POS_FILE = continuum_name.joinpath("tools", "12_model_registration_points_in_sw")
+SW_TIP_POS_FILE = continuum_name.joinpath("tools", "all_tip_registration_points_in_sw")
+T_SW_2_MODEL_FILE = continuum_name.joinpath("tools", "T_sw_2_model")
+T_SW_2_TIP_FILE = continuum_name.joinpath("tools", "T_sw_2_tip")
 
 # FRE (fiducial regisitration error) dictionary initialization
 fre = {}
@@ -127,5 +131,5 @@ print(model_tre_factor, tip_tre_factor, tre)
 
 
 if output:
-    np.savetxt("../tools/T_aurora_2_model", T_aurora_2_model, delimiter=",")
-    np.savetxt("../tools/T_tip_2_coil", T_tip_2_coil, delimiter=",")
+    np.savetxt(continuum_name.joinpath("tools", "T_aurora_2_model"), T_aurora_2_model, delimiter=",")
+    np.savetxt(continuum_name.joinpath("tools", "T_tip_2_coil"), T_tip_2_coil, delimiter=",")

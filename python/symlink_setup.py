@@ -155,6 +155,17 @@ os.symlink(
     continuum_nathan.joinpath("experiments", "transient", "continuum_arduino.py"),
 )
 
+try:
+    os.remove(
+        continuum_nathan.joinpath("experiments", "spie_demo", "continuum_arduino.py")
+    )
+except:
+    pass
+os.symlink(
+    cont_arduino_python,
+    continuum_nathan.joinpath("experiments", "spie_demo", "continuum_arduino.py"),
+)
+
 # continuum_aurora.py links
 
 cont_aurora_python = continuum_nathan.joinpath(

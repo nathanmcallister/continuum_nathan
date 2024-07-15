@@ -1,5 +1,6 @@
 #!/bin/python3
 import serial
+import numpy as np
 from continuum_arduino import ContinuumArduino
 
 arduino = ContinuumArduino()
