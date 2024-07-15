@@ -1,29 +1,18 @@
 #!/bin/python3
 import serial
-import continuum_arduino
+from continuum_arduino import ContinuumArduino
 
-NUM_SEGMENTS = 1
-
-SERVO_MIN = 1221
-SERVO_MAX = 2813
-SERVO_MID = int((SERVO_MAX + SERVO_MIN) / 2)
-TIGHTENING_FACTOR = 1500
-
-tight_motor_cmds = [SERVO_MID] * 4 * NUM_SEGMENTS
-loose_motor_cmds = [SERVO_MID + TIGHTENING_FACTOR] * 4 * NUM_SEGMENTS
-
-arduino = continuum_arduino.init_arduino()
-
-continuum_arduino.write_motor_vals(arduino, tight_motor_cmds)
+arduino = ContinuumArduino()
+arduino.write_dls(np.zeros(4))
 
 state = 0
 
 while state >= 0:
     if state % 2 == 0:
-        continuum_arduino.write_motor_vals(arduino, tight_motor_cmds)
+        arduino.write_dls(np.zeros(4))
         print("Motors tightened.")
     elif state % 2 == 1:
-        continuum_arduino.write_motor_vals(arduino, loose_motor_cmds)
+        arduino.write_dls(np.full(4, 12))
         print("Motors loosened.")
 
     i = input("Type s to switch state, e to exit: ")
@@ -32,5 +21,3 @@ while state >= 0:
         state += 1
     elif i == "e":
         state = -1
-
-arduino.close()

@@ -41,10 +41,18 @@ class ContinuumArduino:
         Returns:
             A ContinuumArduino object with an active serial port.
         """
+
+        # Servo parameters
+        self.servo_min = 1221
+        self.servo_max = 2813
+
         # Motor details
         assert 0 < num_motors <= 16
         self.num_motors = num_motors
-        self.motor_setpoints = self.load_motor_setpoints(setpoint_filename)
+        if setpoint_filename:
+            self.motor_setpoints = self.load_motor_setpoints(setpoint_filename)
+        else:
+            self.motor_setpoints = np.full(num_motors, int((self.servo_min + self.servo_max) // 2))
         self.wheel_radii = wheel_radii
 
         # PWM driver details
@@ -52,10 +60,6 @@ class ContinuumArduino:
         assert 40 <= servo_frequency <= 1600
         self.oscillator_frequency = oscillator_frequency_kHz
         self.servo_frequency = servo_frequency
-
-        # Servo parameters
-        self.servo_min = 1221
-        self.servo_max = 2813
 
         # Transmission flags
         self.transmission_flags = {}
