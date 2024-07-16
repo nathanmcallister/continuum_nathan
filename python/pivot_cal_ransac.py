@@ -1,9 +1,8 @@
 #!/bin/python3
 from pathlib import Path
-import numpy as np
-import pdb
-import matplotlib.pyplot as plt
 from typing import Tuple
+import numpy as np
+import matplotlib.pyplot as plt
 from kinematics import quat_2_dcm
 from utils_data import parse_aurora_csv
 

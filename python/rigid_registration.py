@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import kinematics
 import utils_data
-from pathlib import Path
 
 # Parameters
 REG_FILE = "../data/regs/reg_07_15_24c.csv"

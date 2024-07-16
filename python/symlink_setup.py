@@ -4,556 +4,67 @@ from pathlib import Path
 
 """
 symlink_setup.py
-Nathan McAllister - 07/01/2024
+Created: Nathan McAllister - 07/01/2024
+Updated: Cameron Wolfe - 07/15/2024
 
-Creates all symlinked files, using source files from the 'python' folder
-run as administrator once to set up all symlinked files
+Creates symlinks in all subdirectories of experiments, testing, and setup.
+
+In each directory, the file "symlinks.txt" contains all of the libraries needed
+to run the scripts in that directory.  This is then compared with the libraries
+in the python folder, and creates a symlink between them.  Run as administrator
+on Windows.
 """
 
-continuum_nathan = Path(
-    __file__
-).parent.parent  # change this if file location of this script changes
-print(f"continuum_nathan file path: {continuum_nathan}")
+# Directories where symlinks should be created
+dir_names = ["../experiments/", "../testing/", "../setup/"]
 
-# starting with the continuum_arduino.py links
 
-cont_arduino_python = continuum_nathan.joinpath(
-    "python", "continuum_arduino.py"
-)  # source path
-print(f"source file path: {cont_arduino_python}")
+def update_symlinks(directory_path):
+    # Get a string of the current directory for printing
+    dir_str = "/".join(directory_path.parts[-2:])
 
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "camarillo_fitting", "continuum_arduino.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath(
-        "experiments", "camarillo_fitting", "continuum_arduino.py"
-    ),
-)
+    # Folder has symlinks.txt
+    if (directory_path / "symlinks.txt").exists():
 
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "constant_curvature", "continuum_arduino.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath(
-        "experiments", "constant_curvature", "continuum_arduino.py"
-    ),
-)
+        # Get files from symlinks.txt
+        with open(directory_path / "symlinks.txt") as file:
+            symlinks = [symlink.strip() for symlink in file.readlines()]
 
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "model_control", "continuum_arduino.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "model_control", "continuum_arduino.py"),
-)
+        # Check if symlinks.txt is empty
+        if symlinks and symlinks[0]:
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "motor_babble", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "motor_babble", "continuum_arduino.py"),
-)
+            # Console output containing all symlinks listed
+            symlinks_str = "\n    ".join(symlinks)
+            print(f"{dir_str}:\n    \033[96m{symlinks_str}\033[0m")
 
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "repeatability", "continuum_arduino.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "repeatability", "continuum_arduino.py"),
-)
+            for symlink in symlinks:
+                # Find the location of the symlink in the python folder (source)
+                symlink_glob = list(Path.cwd().glob(f"**/{symlink}"))
 
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "sweep", "continuum_arduino.py"))
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "sweep", "continuum_arduino.py"),
-)
+                # If it is found, create a symlink
+                if symlink_glob:
+                    if (directory_path / symlink).exists():
+                        os.remove(directory_path / symlink)
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "tensioning", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "tensioning", "continuum_arduino.py"),
-)
+                    os.symlink(symlink_glob[0], directory_path / symlink)
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("python", "servo_setup", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("python", "servo_setup", "continuum_arduino.py"),
-)
+                else:
+                    print(f"\033[91mInvalid file ({symlink}) in symlinks.txt\033[0m")
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("python", "spine_setup", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("python", "spine_setup", "continuum_arduino.py"),
-)
+        else:
+            print(f"{dir_str}:\033[93m Empty symlinks.txt\033[0m")
 
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "testing", "continuum_arduino", "continuum_arduino.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("testing", "continuum_arduino", "continuum_arduino.py"),
-)
+    else:
+        print(f"{dir_str}:\033[91m No symlinks.txt\033[0m")
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "transient", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "transient", "continuum_arduino.py"),
-)
 
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "spie_demo", "continuum_arduino.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_arduino_python,
-    continuum_nathan.joinpath("experiments", "spie_demo", "continuum_arduino.py"),
-)
+if __name__ == "__main__":
 
-# continuum_aurora.py links
+    dir_paths = [Path(x) for x in dir_names]
 
-cont_aurora_python = continuum_nathan.joinpath(
-    "python", "continuum_aurora.py"
-)  # source path
-print(f"source file path: {cont_aurora_python}")
+    subdirectories = []
+    for dir_path in dir_paths:
+        subdirectories.extend([x for x in dir_path.iterdir() if x.is_dir()])
 
-# deleting existing files
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "aurora_timing", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "aurora_timing", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "base_position", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "base_position", "continuum_aurora.py"),
-)
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "camarillo_fitting", "continuum_aurora.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath(
-        "experiments", "camarillo_fitting", "continuum_aurora.py"
-    ),
-)
-try:
-    os.remove(
-        continuum_nathan.joinpath(
-            "experiments", "constant_curvature", "continuum_aurora.py"
-        )
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath(
-        "experiments", "constant_curvature", "continuum_aurora.py"
-    ),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "model_control", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "model_control", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "motor_babble", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "motor_babble", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "repeatability", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "repeatability", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "sweep", "continuum_aurora.py"))
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "sweep", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "tensioning", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "tensioning", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("testing", "continuum_aurora", "continuum_aurora.py")
-    )
-
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("testing", "continuum_aurora", "continuum_aurora.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "transient", "continuum_aurora.py")
-    )
-except:
-    pass
-os.symlink(
-    cont_aurora_python,
-    continuum_nathan.joinpath("experiments", "transient", "continuum_aurora.py"),
-)
-
-# kinamatics.py links
-
-kinematics_python = continuum_nathan.joinpath("python", "kinematics.py")  # source path
-print(f"source file path: {kinematics_python}")
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "aurora_timing", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "aurora_timing", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "base_position", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "base_position", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "camarillo_fitting", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "camarillo_fitting", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "constant_curvature", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "constant_curvature", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "model_control", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "model_control", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "model_learning", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "model_learning", "kinematics.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "motor_babble", "kinematics.py"))
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "motor_babble", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "new_pivot_cal", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "new_pivot_cal", "kinematics.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "repeatability", "kinematics.py")
-    )
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "repeatability", "kinematics.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "sweep", "kinematics.py"))
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "sweep", "kinematics.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "tensioning", "kinematics.py"))
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "tensioning", "kinematics.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("testing", "continuum_aurora", "kinematics.py"))
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("testing", "continuum_aurora", "kinematics.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "transient", "kinematics.py"))
-except:
-    pass
-os.symlink(
-    kinematics_python,
-    continuum_nathan.joinpath("experiments", "transient", "kinematics.py"),
-)
-
-# utils_data.py links
-
-utils_data_python = continuum_nathan.joinpath("python", "utils_data.py")  # source path
-print(f"source file path: {utils_data_python}")
-
-# deleting existing files
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "base_position", "utils_data.py")
-    )
-
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "base_position", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "camarillo_fitting", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "camarillo_fitting", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "constant_curvature", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "constant_curvature", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "model_control", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "model_control", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "model_learning", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "model_learning", "utils_data.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "motor_babble", "utils_data.py"))
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "motor_babble", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "new_pivot_cal", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "new_pivot_cal", "utils_data.py"),
-)
-
-try:
-    os.remove(
-        continuum_nathan.joinpath("experiments", "repeatability", "utils_data.py")
-    )
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "repeatability", "utils_data.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "sweep", "utils_data.py"))
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "sweep", "utils_data.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("testing", "continuum_aurora", "utils_data.py"))
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("testing", "continuum_aurora", "utils_data.py"),
-)
-
-try:
-    os.remove(continuum_nathan.joinpath("experiments", "transient", "utils_data.py"))
-except:
-    pass
-os.symlink(
-    utils_data_python,
-    continuum_nathan.joinpath("experiments", "transient", "utils_data.py"),
-)
+    for subdirectory in subdirectories:
+        update_symlinks(subdirectory)
