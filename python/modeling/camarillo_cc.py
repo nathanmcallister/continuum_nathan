@@ -81,6 +81,11 @@ class CamarilloSpine:
         else:
             return self.A @ dls
 
+    def inverse(self, camarillo_params: np.ndarray) -> np.ndarray:
+        assert len(camarillo_params) / 3 == self.num_segments
+
+        return self.A_inv @ camarillo_params
+
     def __get_camarillo_matrices(self):
 
         # Initialization of matrices and lists for equation

@@ -1,4 +1,5 @@
 #!/bin/python3
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import kinematics
@@ -21,11 +22,11 @@ T_SW_2_TIP_FILE = "../tools/T_sw_2_tip"
 fre = {}
 
 # File inputs
-model_truth_in_sw = np.loadtxt(SW_MODEL_POS_FILE, delimiter=",")
-tip_truth_in_sw = np.loadtxt(SW_TIP_POS_FILE, delimiter=",")
-T_sw_2_model = np.loadtxt(T_SW_2_MODEL_FILE, delimiter=",")
-T_sw_2_tip = np.loadtxt(T_SW_2_TIP_FILE, delimiter=",")
-penprobe = np.loadtxt(TIP_FILE, delimiter=",")
+model_truth_in_sw = np.loadtxt(Path(SW_MODEL_POS_FILE), delimiter=",")
+tip_truth_in_sw = np.loadtxt(Path(SW_TIP_POS_FILE), delimiter=",")
+T_sw_2_model = np.loadtxt(Path(T_SW_2_MODEL_FILE), delimiter=",")
+T_sw_2_tip = np.loadtxt(Path(T_SW_2_TIP_FILE), delimiter=",")
+penprobe = np.loadtxt(Path(TIP_FILE), delimiter=",")
 
 aurora_transforms = utils_data.parse_aurora_csv(REG_FILE)
 
@@ -127,5 +128,5 @@ print(model_tre_factor, tip_tre_factor, tre)
 
 
 if output:
-    np.savetxt("../tools/T_aurora_2_model", T_aurora_2_model, delimiter=",")
-    np.savetxt("../tools/T_tip_2_coil", T_tip_2_coil, delimiter=",")
+    np.savetxt(Path("../tools/T_aurora_2_model"), T_aurora_2_model, delimiter=",")
+    np.savetxt(Path("../tools/T_tip_2_coil"), T_tip_2_coil, delimiter=",")

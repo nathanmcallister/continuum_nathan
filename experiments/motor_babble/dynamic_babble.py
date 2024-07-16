@@ -1,4 +1,5 @@
 #!/bin/python3
+from pathlib import Path
 import numpy as np
 import time
 import utils_data
@@ -13,8 +14,8 @@ num_motors = 4
 num_measurements = 2
 sample_period = 0.5
 
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
+T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
 
 arduino = continuum_arduino.init_arduino()
 aurora = continuum_aurora.init_aurora()

@@ -1,5 +1,7 @@
 #!/bin/python3
+from pathlib import Path
 import numpy as np
+import pdb
 import matplotlib.pyplot as plt
 from typing import Tuple
 from kinematics import quat_2_dcm
@@ -196,8 +198,7 @@ def ransac(ransac_iterations, subset_size, error_threshold, good_fit_threshold):
 penprobe, pivot = ransac(
     ransac_iterations, subset_size, error_threshold, good_fit_threshold
 )
-np.savetxt(output_filename, penprobe, delimiter=",")
-print(penprobe)
+np.savetxt(Path(output_filename), penprobe, delimiter=",")
 
 # Plotting
 if show_plots:

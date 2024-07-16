@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import List, Tuple
 import numpy as np
 import os
+from pathlib import Path
 import datetime
 import utils_data
 import matplotlib.pyplot as plt
@@ -207,18 +208,16 @@ class Model(nn.Module):
         if checkpoints:
             now = datetime.datetime.now()
 
-            dir_path = os.path.dirname(os.path.realpath(__file__))
+            checkpoints_dir = Path("checkpoints/")
 
-            checkpoints_dir = os.path.join(dir_path, "checkpoints/")
-
-            if not os.path.exists(checkpoints_dir):
+            if not checkpoints_dir.exists():
                 os.mkdir(checkpoints_dir)
 
             checkpoints_path = f"{now.year}_{now.month:02n}_{now.day:02n}_{now.hour:02n}_{now.minute:02n}_{now.second:02n}/"
 
-            checkpoints_path = os.path.join(checkpoints_dir, checkpoints_path)
+            checkpoints_path = checkpoints_dir / checkpoints_path
 
-            if not os.path.exists(checkpoints_path):
+            if not checkpoints_path.exists():
                 os.mkdir(checkpoints_path)
 
         for epoch in range(num_epochs):
@@ -229,7 +228,7 @@ class Model(nn.Module):
                 test_loss.append(self.test_epoch(test_dataloader))
 
             if checkpoints:
-                file_path = os.path.join(checkpoints_path + f"epoch_{epoch+1}.pt")
+                file_path = checkpoints_path / f"epoch_{epoch+1}.pt"
                 torch.save(
                     {
                         "epoch": epoch + 1,
@@ -244,7 +243,7 @@ class Model(nn.Module):
             min_val_loss = min(enumerate(test_loss), key=lambda x: x[1])
             epoch = min_val_loss[0] + 1
 
-            checkpoint = torch.load(checkpoints_path + f"epoch_{epoch}.pt")
+            checkpoint = torch.load(checkpoints_path / f"epoch_{epoch}.pt")
             assert (
                 checkpoint["epoch"] == epoch
                 and checkpoint["validation_loss"] == min_val_loss[1]
@@ -285,7 +284,7 @@ class Model(nn.Module):
         ), "No model save path specified in initialization or in save function"
         if not self.save_path.endswith(".pt"):
             self.save_path += ".pt"
-        torch.save(self.model.state_dict(), self.save_path)
+        torch.save(self.model.state_dict(), Path(self.save_path))
 
     def load(self, model_load_path: str):
         """
@@ -297,7 +296,7 @@ class Model(nn.Module):
 
         if not model_load_path.endswith(".pt"):
             model_load_path += ".pt"
-        self.model.load_state_dict(torch.load(model_load_path))
+        self.model.load_state_dict(torch.load(Path(model_load_path)))
         self.model.to(self.device)
 
 

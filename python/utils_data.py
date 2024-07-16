@@ -1,3 +1,4 @@
+from pathlib import Path
 import datetime
 import numpy as np
 import pandas as pd
@@ -24,7 +25,7 @@ class DataContainer:
                 + f"_{self.date[0]:02n}_{self.date[1]:02n}_{self.date[2]:02n}_{self.time[0]:02n}_{self.time[1]:02n}_{self.time[2]:02n}.dat"
             )
 
-        with open(filename, "w") as file:
+        with open(Path(filename), "w") as file:
             file.write(f"DATE: {self.date[0]}-{self.date[1]}-{self.date[2]}\n")
             file.write(f"TIME: {self.time[0]}-{self.time[1]}-{self.time[2]}\n")
             file.write(f"NUM_CABLES: {self.num_cables}\n")
@@ -48,7 +49,7 @@ class DataContainer:
                 counter += 1
 
     def file_import(self, filename: str):
-        with open(filename, "r") as file:
+        with open(Path(filename), "r") as file:
             date_line = file.readline()
             date_list = date_line.split(":")
             assert date_list[0] == "DATE"
@@ -162,7 +163,7 @@ def parse_aurora_csv(
     filename: str,
 ) -> Dict[str, List[Tuple[np.ndarray, np.ndarray, float]]]:
 
-    df = pd.read_csv(filename, header=None)
+    df = pd.read_csv(Path(filename), header=None)
 
     probes = pd.unique(df.iloc[:, 2])
 

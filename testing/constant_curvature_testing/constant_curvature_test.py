@@ -1,6 +1,6 @@
-from camarillo_cc import *
-from one_tendon_cc import *
 import numpy as np
+from camarillo_cc import *
+from mike_cc import *
 
 """
 delta_lengths = [(5,)]

@@ -15,9 +15,7 @@ class ContinuumArduino:
     def __init__(
         self,
         num_motors: int = 4,
-        setpoint_filename: str = Path(__file__).parent.parent.parent.joinpath(
-            "tools", "motor_setpoints"
-        ),
+        setpoint_filename: str = "../../tools/motor_setpoints",
         wheel_radii: np.ndarray = np.array([15, 15, 15, 15], dtype=float),
         oscillator_frequency_kHz: int = 25_000,
         servo_frequency: int = 324,
@@ -303,9 +301,7 @@ class ContinuumArduino:
 
     def load_motor_setpoints(
         self,
-        filename: str = Path(__file__).parent.parent.parent.joinpath(
-            "tools", "motor_setpoints"
-        ),
+        filename: str,
     ) -> np.ndarray:
         """
         Loads motor setpoints from a file.
@@ -316,9 +312,8 @@ class ContinuumArduino:
         Returns:
             A numpy array containing the setpoints
         """
-        file = open(filename, "r")
-        values = file.readline()
-        return np.array([int(x) for x in values.split(",")], dtype=int)
+        self.motor_setpoints = np.loadtxt(Path(filename), delimiter=",", dtype=int)
+
 
     def crc_add_bytes(self, CRC: int, payload: bytearray) -> int:
         """

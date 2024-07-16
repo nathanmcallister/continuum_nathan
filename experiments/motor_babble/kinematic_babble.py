@@ -2,9 +2,11 @@
 import numpy as np
 import time
 import utils_data
+import os
 from continuum_aurora import ContinuumAurora
 from continuum_arduino import ContinuumArduino
 import kinematics
+from pathlib import Path
 
 ns2s = 10**-9
 
@@ -14,8 +16,8 @@ num_motors = 4
 num_measurements = 2**14
 sample_period = 4
 
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
+T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
 
 arduino = ContinuumArduino()
 aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
