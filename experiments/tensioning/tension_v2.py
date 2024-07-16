@@ -5,6 +5,7 @@ import time
 import continuum_arduino
 import continuum_aurora
 import kinematics
+from pathlib import Path
 
 """ Tensioning
 Cameron Wolfe 04/20/24
@@ -25,9 +26,12 @@ num_motors = 4
 servo_min = 80
 servo_max = 530
 
+# Init filepath
+continuum_name = Path(__file__).parent.parent.parent
+
 # Load tools and setpoints
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
+T_aurora_2_model = np.loadtxt(continuum_name.joinpath("tools","T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(continuum_name.joinpath("tools","T_tip_2_coil"), delimiter=",")
 
 motor_setpoints = [int((servo_min + servo_max) / 2)] * num_motors
 
@@ -130,7 +134,7 @@ final_motor_vals = continuum_arduino.one_seg_dl_2_motor_vals(
 continuum_arduino.write_motor_vals(arduino, final_motor_vals)
 
 # Output setpoints
-file = open("../../tools/motor_setpoints", "w")
+file = open(continuum_name.joinpath("tools","motor_setpoints"), "w")
 for i in range(4):
     if i < 3:
         file.write(str(final_motor_vals[i]) + ",")

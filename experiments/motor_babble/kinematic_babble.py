@@ -16,8 +16,16 @@ num_motors = 4
 num_measurements = 2**14
 sample_period = 4
 
+<<<<<<< HEAD
 T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
 T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
+=======
+# init filepath
+continuum_name = Path(__file__).parent.parent.parent
+
+T_aurora_2_model = np.loadtxt(continuum_name.joinpath("tools","T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(continuum_name.joinpath("tools","T_tip_2_coil"), delimiter=",")
+>>>>>>> 76a52845f12c8942810a157345cea541238dbac0
 
 arduino = ContinuumArduino()
 aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)

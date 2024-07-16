@@ -4,9 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import kinematics
 import utils_data
+from pathlib import Path
 
 # Parameters
-REG_FILE = "../data/regs/reg_07_03_24a.csv"
+REG_FILE = "../data/regs/reg_07_15_24c.csv"
 TIP_FILE = "../tools/penprobe_07_03_24i"
 output = True
 num_repetitions = 5
@@ -128,5 +129,10 @@ print(model_tre_factor, tip_tre_factor, tre)
 
 
 if output:
+<<<<<<< HEAD
     np.savetxt(Path("../tools/T_aurora_2_model"), T_aurora_2_model, delimiter=",")
     np.savetxt(Path("../tools/T_tip_2_coil"), T_tip_2_coil, delimiter=",")
+=======
+    np.savetxt(continuum_name.joinpath("tools", "T_aurora_2_model"), T_aurora_2_model, delimiter=",")
+    np.savetxt(continuum_name.joinpath("tools", "T_tip_2_coil"), T_tip_2_coil, delimiter=",")
+>>>>>>> 76a52845f12c8942810a157345cea541238dbac0

@@ -5,14 +5,18 @@ from continuum_arduino import ContinuumArduino
 from continuum_aurora import ContinuumAurora
 import kinematics
 import utils_data
+from pathlib import Path
 
 max_displacement = 12
 angular_steps = 128
 repetitions = 8
 wait = 0.5
 
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
+# init filepath
+continuum_name = Path(__file__).parent.parent.parent
+
+T_aurora_2_model = np.loadtxt(continuum_name.joinpath("tools","T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(continuum_name.joinpath("tools","T_tip_2_coil"), delimiter=",")
 
 phi = -(np.arange(0, angular_steps) * 2 * np.pi / angular_steps).reshape((1, -1))
 
@@ -41,4 +45,4 @@ for i in range(repetitions):
 
 arduino.write_dls(np.zeros(4))
 print()
-np.savetxt("output/multi_sweep_backwards.dat", positions, delimiter=",")
+np.savetxt(Path(__file__).parent.joinpath("output","multi_sweep_backwards.dat"), positions, delimiter=",")

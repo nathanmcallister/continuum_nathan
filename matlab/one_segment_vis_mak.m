@@ -4,7 +4,7 @@ close all; clear; clc;
 % plotting full range of motion
 L = 16*4; % mm
 phi = linspace(0, pi, 5); phi(end) = [];
-kappa = linspace(-pi/L, pi/L, 20);
+kappa = linspace(-pi/L, pi/L, 20); % curvature
 
 T = zeros(4,4);
 
@@ -14,7 +14,7 @@ axis equal;
 view([0 0]);
 % generate transforms for each point
 k = 1;
-for i = 1:2%1%length(phi)
+for i = 1:length(phi)
     for j = 1:length(kappa)
         disp((i-1)*length(kappa)+j);
         T(:,:,(i-1)*length(kappa)+j) = generate_transformation_matrix(L, phi(i), kappa(j));
@@ -25,57 +25,57 @@ for i = 1:2%1%length(phi)
     end
 end
 
-
-for phi_idx = 2
-    for theta_max = (2*pi/38)+2*(2*pi/19)
+for phi_idx = 1:2
+    for theta_max = linspace(-pi, pi, length(kappa))  % (2*pi/38)+2*(2*pi/19) % converting curvature to angle
         theta = linspace(0,theta_max,100);
         r = L/theta_max;
         arc_shape = [r-r*cos(theta);zeros(size(theta));r*sin(theta)];
         R = [cos(phi(phi_idx)) -sin(phi(phi_idx)) 0; sin(phi(phi_idx)) cos(phi(phi_idx)) 0; 0 0 1];
         arc_shape_rot = R*arc_shape;
         plot3(arc_shape_rot(1,:),arc_shape_rot(2,:),arc_shape_rot(3,:),'-','LineWidth',3,'Color',[0.8 0 0]);
+        drawnow;
 
-        % specify joint values
-        jv = [phi(phi_idx)];%,r,theta_max];
-
-        % initialize robot structure
-        robot = [];
-        robot.type = [jntyp.R jntyp.D]; % jntyp.P jntyp.R];
-        robot.dh = [
-            0       0      0        pi/2;
-            0       pi/2   0        0;
-            ];
+        % % specify joint values
+        % jv = [phi(phi_idx)];%,r,theta_max];
+        % 
+        % % initialize robot structure
+        % robot = [];
+        % robot.type = [jntyp.R jntyp.D]; % jntyp.P jntyp.R];
         % robot.dh = [
-        %     0       pi/2      0        pi/2;
-        %     0       pi/2      0       -pi/2;
-        %     0       pi/2      0        pi/2''
+        %     0       0      0        pi/2;
+        %     0       pi/2   0        0;
         %     ];
-
-        % make sure we have the right number of joint values and an
-        % appropriate nominal DH table
-        assert(length(jv) == sum( robot.type == jntyp.R | robot.type == jntyp.P),"JV and type definitions not equal");
-        assert(length(robot.type) == size(robot.dh,1),"JV and DH tables have different sizes");
-
-        % update DH table based on joint values
-        jv_idx = 1;
-        for dh_row_idx = 1:size(robot.dh,1)
-            if(robot.type(dh_row_idx) == jntyp.P)
-                robot.dh(dh_row_idx,3) = robot.dh(dh_row_idx,3) + jv(jv_idx);
-                jv_idx = jv_idx + 1;
-            elseif(robot.type(dh_row_idx) == jntyp.R)
-                robot.dh(dh_row_idx,4) = robot.dh(dh_row_idx,4) + jv(jv_idx);
-                jv_idx = jv_idx + 1;
-            end
-        end
-
-        % now compute the transforms
-        TF = [];
-        TF(:,:,1) = eye(4);
-        plotTriad(TF(:,:,1),5);
-        for dh_row_idx = 1:size(robot.dh,1)
-            TF(:,:,dh_row_idx+1) = compute_dh_transform(TF(:,:,dh_row_idx), robot.dh(dh_row_idx,:));
-            plotTriad(TF(:,:,dh_row_idx+1),5);
-        end
+        % % robot.dh = [
+        % %     0       pi/2      0        pi/2;
+        % %     0       pi/2      0       -pi/2;
+        % %     0       pi/2      0        pi/2''
+        % %     ];
+        % 
+        % % make sure we have the right number of joint values and an
+        % % appropriate nominal DH table
+        % assert(length(jv) == sum( robot.type == jntyp.R | robot.type == jntyp.P),"JV and type definitions not equal");
+        % assert(length(robot.type) == size(robot.dh,1),"JV and DH tables have different sizes");
+        % 
+        % % update DH table based on joint values
+        % jv_idx = 1;
+        % for dh_row_idx = 1:size(robot.dh,1)
+        %     if(robot.type(dh_row_idx) == jntyp.P)
+        %         robot.dh(dh_row_idx,3) = robot.dh(dh_row_idx,3) + jv(jv_idx);
+        %         jv_idx = jv_idx + 1;
+        %     elseif(robot.type(dh_row_idx) == jntyp.R)
+        %         robot.dh(dh_row_idx,4) = robot.dh(dh_row_idx,4) + jv(jv_idx);
+        %         jv_idx = jv_idx + 1;
+        %     end
+        % end
+        % 
+        % % now compute the transforms
+        % TF = [];
+        % TF(:,:,1) = eye(4);
+        % plotTriad(TF(:,:,1),5);
+        % for dh_row_idx = 1:size(robot.dh,1)
+        %     TF(:,:,dh_row_idx+1) = compute_dh_transform(TF(:,:,dh_row_idx), robot.dh(dh_row_idx,:));
+        %     plotTriad(TF(:,:,dh_row_idx+1),5);
+        % end
 
 
     end
