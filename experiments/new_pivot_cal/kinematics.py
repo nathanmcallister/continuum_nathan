@@ -1,1 +1,0 @@
-c:/Users/nmcal/Documents/GitHub/continuum_nathan/python/kinematics.py
