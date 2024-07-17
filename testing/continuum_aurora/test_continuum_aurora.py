@@ -2,11 +2,15 @@
 import numpy as np
 import time
 from continuum_aurora import ContinuumAurora
+from pathlib import Path
 
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
+# init filepaths
+continuum_name = Path(__file__).parent.parent.parent
 
-aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil, serial_port_name = "COM4")
+T_aurora_2_model = np.loadtxt(continuum_name.joinpath("tools","T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(continuum_name.joinpath("tools/T_tip_2_coil"), delimiter=",")
+
+aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil, serial_port_name = "COM5")
 
 counter = 0
 start = time.time_ns()

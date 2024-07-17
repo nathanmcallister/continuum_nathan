@@ -4,6 +4,7 @@ import pandas as pd
 from dataclasses import dataclass, field
 from typing import Tuple, List, Dict
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 
 @dataclass
@@ -24,7 +25,7 @@ class DataContainer:
                 + f"_{self.date[0]:02n}_{self.date[1]:02n}_{self.date[2]:02n}_{self.time[0]:02n}_{self.time[1]:02n}_{self.time[2]:02n}.dat"
             )
 
-        with open(filename, "w") as file:
+        with open(Path(__file__).parent.joinpath("output", filename), "w") as file:
             file.write(f"DATE: {self.date[0]}-{self.date[1]}-{self.date[2]}\n")
             file.write(f"TIME: {self.time[0]}-{self.time[1]}-{self.time[2]}\n")
             file.write(f"NUM_CABLES: {self.num_cables}\n")

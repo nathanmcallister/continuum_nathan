@@ -13,7 +13,7 @@ motor_std = 4
 motor_range = 13
 num_motors = 4
 num_measurements = 2**14
-sample_period = 4
+sample_period = 3.5
 
 # init filepath
 continuum_name = Path(__file__).parent.parent.parent
@@ -44,7 +44,7 @@ tang = np.nan * np.zeros((3, num_measurements))
 
 container = utils_data.DataContainer()
 container.set_date_and_time()
-container.prefix = "output/kinematic"
+container.prefix = "kinematic"
 
 meas_counter = 0
 prev_time = time.perf_counter_ns()
