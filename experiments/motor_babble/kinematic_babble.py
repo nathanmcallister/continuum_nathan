@@ -14,18 +14,10 @@ motor_std = 4
 motor_range = 13
 num_motors = 4
 num_measurements = 2**14
-sample_period = 4
+sample_period = 3.5
 
-<<<<<<< HEAD
 T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
 T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
-=======
-# init filepath
-continuum_name = Path(__file__).parent.parent.parent
-
-T_aurora_2_model = np.loadtxt(continuum_name.joinpath("tools","T_aurora_2_model"), delimiter=",")
-T_tip_2_coil = np.loadtxt(continuum_name.joinpath("tools","T_tip_2_coil"), delimiter=",")
->>>>>>> 76a52845f12c8942810a157345cea541238dbac0
 
 arduino = ContinuumArduino()
 aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
@@ -50,7 +42,7 @@ tang = np.nan * np.zeros((3, num_measurements))
 
 container = utils_data.DataContainer()
 container.set_date_and_time()
-container.prefix = "output/kinematic"
+container.prefix = "kinematic"
 
 meas_counter = 0
 prev_time = time.perf_counter_ns()
