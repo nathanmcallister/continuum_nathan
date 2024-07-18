@@ -27,9 +27,24 @@ def webster_2_camarillo_params(
 
 def camarillo_2_webster_params(
     camarillo_params: np.ndarray, segment_lengths: List[float]
-) -> List[Tuple[float, ...]]:
+) -> np.ndarray:
+    """
+    Converts camarillo parameters (kappa_x, kappa_y, epsilon_a) to webster parameters
+    (l, kappa, phi)
+
+    Args:
+        camarillo_params: A length 3n numpy array containing the camarillo
+        parameters (kappa_x, kappa_y, epsilon_a) for n segments where kappa_x and
+        kappa_y are the curvature in the x and y axes, and epsilon_a is the axial
+        strain (where positive epsilon_a indicates compression of the spine)
+        segment_lengths: The length of each segment
+
+    Returns:
+        A length 3n numpy array containing the webster parameters (l, kappa, phi)
+        for n segments.
+    """
     assert len(camarillo_params) % 3 == 0
-    num_segments = int(len(camarillo_params) / 3)
+    num_segments = len(camarillo_params) // 3
     assert num_segments == len(segment_lengths)
 
     webster_params = []
@@ -44,17 +59,33 @@ def camarillo_2_webster_params(
 
         l = (1 - axial_strain) * segment_lengths[i]
 
-        webster_params.append((l, kappa, phi))
+        webster_params.extend((l, kappa, phi))
+
+    return np.array(webster_params)
+
+
+def mike_2_webster_params(mike_params: np.ndarray) -> np.ndarray:
+    """
+    Converts Mike parameters (l, theta, phi) to webster parameters (l, kappa, phi)
+
+    Args:
+        mike_params: A length 3n numpy array containing the mike parameters
+        (l, theta, phi) for n segments.
+
+    Returns:
+        A length 3n numpy array containing the webster parameters (l, kappa, phi)
+        for n segments.
+    """
+
+    assert len(mike_params) % 3 == 0
+    num_segments = len(mike_params) // 3
+
+    webster_params = mike_params
+
+    for i in range(num_segments):
+        webster_params[3 * i + 1] = mike_params[3 * i + 1] / mike_params[3 * i]
 
     return webster_params
-
-
-def mike_2_webster_params(
-    segment_length: float, theta: float, phi: float
-) -> Tuple[float, ...]:
-    kappa = theta / segment_length
-
-    return (segment_length, kappa, phi)
 
 
 def dh_param_2_transform(param: Tuple[float, ...]) -> np.ndarray:
@@ -103,12 +134,12 @@ def get_dh_params(param_tuple: Tuple[float, ...]) -> List[Tuple[float, ...]]:
     return [(0, l, 0, 0)]
 
 
-def calculate_transforms(robot_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
+def calculate_transforms(webster_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
     T = np.eye(4, dtype=float)
     segment_transforms = []
 
-    for robot_param_tuple in robot_params:
-        dh_params = get_dh_params(robot_param_tuple)
+    for param_tuple in webster_params:
+        dh_params = get_dh_params(param_tuple)
 
         for dh_param in dh_params:
             new_T = dh_param_2_transform(dh_param)
@@ -119,11 +150,11 @@ def calculate_transforms(robot_params: List[Tuple[float, ...]]) -> List[np.ndarr
     return segment_transforms
 
 
-def calculate_transform(robot_params: Tuple[float, ...]) -> np.ndarray:
+def calculate_transform(webster_params: np.ndarray) -> np.ndarray:
 
     T = np.eye(4, dtype=float)
 
-    dh_params = get_dh_params(robot_params)
+    dh_params = get_dh_params(webster_params)
 
     for dh_param in dh_params:
         new_T = dh_param_2_transform(dh_param)
@@ -133,51 +164,41 @@ def calculate_transform(robot_params: Tuple[float, ...]) -> np.ndarray:
 
 
 def plot_robot(
-    robot_params: List[Tuple[float, ...]], points_per_segment: float = 32
-) -> None:
-    num_segments = len(robot_params)
+    webster_params: np.ndarray,
+    points_per_segment: float = 32,
+    ax: plt.axes = None,
+) -> plt.axes:
+
+    assert len(webster_params) % 3 == 0
+    num_segments = len(webster_params) // 3
     points = np.zeros((3, num_segments * points_per_segment + 1))
     T_base = np.identity(4)
 
     for segment in range(num_segments):
         segment_sample_lengths = np.linspace(
-            0, robot_params[segment][0], points_per_segment + 1
+            0, webster_params[3 * segment], points_per_segment + 1
         )
         segment_sample_lengths = segment_sample_lengths[1:]
 
-        kappa = robot_params[segment][1]
-        phi = robot_params[segment][2]
+        kappa = webster_params[3 * segment + 1]
+        phi = webster_params[3 * segment + 2]
 
         T_point = np.identity(4)
 
         for i in range(points_per_segment):
-            point_params = [(segment_sample_lengths[i], kappa, phi)]
-            T_point = calculate_transforms(point_params)[0]
+            point_params = np.array([segment_sample_lengths[i], kappa, phi])
+            T_point = calculate_transform(point_params)
 
             T_point_in_base = np.matmul(T_base, T_point)
 
             points[:, 1 + segment * points_per_segment + i] = T_point_in_base[0:3, 3]
 
         T_base = np.matmul(T_base, T_point)
-
-    ax = plt.figure().add_subplot(projection="3d")
+    if not ax:
+        ax = plt.figure().add_subplot(projection="3d")
     ax.plot(points[0, :], points[1, :], points[2, :])
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    zlim = ax.get_zlim()
+    plt.xlim([-32, 32])
+    plt.ylim([-32, 32])
+    ax.set_zlim([0, 64])
 
-    xmean = (xlim[1] + xlim[0]) / 2
-    ymean = (ylim[1] + ylim[0]) / 2
-    zmean = (zlim[1] + zlim[0]) / 2
-
-    xrange = xlim[1] - xlim[0]
-    yrange = ylim[1] - ylim[0]
-    zrange = zlim[1] - zlim[0]
-
-    bound_size = max(xrange, yrange, zrange)
-
-    ax.set_xlim((xmean - bound_size, xmean + bound_size))
-    ax.set_ylim((ymean - bound_size, ymean + bound_size))
-    ax.set_zlim((zmean - bound_size, zmean + bound_size))
-
-    plt.show()
+    return ax

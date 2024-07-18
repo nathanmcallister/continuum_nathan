@@ -1,5 +1,6 @@
 from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
+import numpy as np
 
 
 class MikeModel:
@@ -31,7 +32,7 @@ class MikeModel:
         self.cable_positions = cable_positions
         self.segment_length = segment_length
 
-    def forward(self, dls: np.ndarray):
+    def forward(self, dls: np.ndarray) -> np.ndarray:
         assert len(dls) == self.num_cables
 
         phi_numerator = (

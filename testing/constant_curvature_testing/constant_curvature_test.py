@@ -1,69 +1,33 @@
+#!/bin/python3
 import numpy as np
-from camarillo_cc import *
-from mike_cc import *
+import matplotlib.pyplot as plt
+from camarillo_cc import CamarilloModel
+from mike_cc import MikeModel
+from utils_cc import mike_2_webster_params, camarillo_2_webster_params, plot_robot
 
-"""
-delta_lengths = [(5,)]
-cable_positions = [((1, 0),)]
+
+cable_positions = [((1, 0), (0, 1), (-1, 0), (0, -1))]
 segment_stiffness_vals = [(np.inf, 1)]
-cable_stiffness_vals = [(np.inf,)]
+cable_stiffness_vals = [(1000000, 1000000, 1000000, 1000000)]
 segment_lengths = [64]
 
-print(
-    camarillo_constant_curvature_no_slack(
-        delta_lengths,
-        cable_positions,
-        segment_stiffness_vals,
-        cable_stiffness_vals,
-        segment_lengths,
-    )
-)
-print(
-    camarillo_constant_curvature_slack(
-        delta_lengths,
-        cable_positions,
-        segment_stiffness_vals,
-        cable_stiffness_vals,
-        segment_lengths,
-    )
-)
-"""
-# print(one_tendon_constant_curvature(5, 64, 1))
-
-delta_lengths = [(5,)]
-cable_positions = [((0, 0),)]
-segment_stiffness_vals = [(1, 1)]
-cable_stiffness_vals = [(1,)]
-segment_lengths = [64]
-
-print(
-    q_to_l_kappa_phi(
-        camarillo_constant_curvature_no_slack(
-            delta_lengths,
-            cable_positions,
-            segment_stiffness_vals,
-            cable_stiffness_vals,
-            segment_lengths,
-        ),
-        64,
-    )
+camarillo_model = CamarilloModel(
+    cable_positions, segment_stiffness_vals, cable_stiffness_vals, segment_lengths, 0
 )
 
-delta_lengths = [(5, 5)]
-cable_positions = [((2, 0), (-2, 0))]
-segment_stiffness_vals = [(1, 1)]
-cable_stiffness_vals = [(1, 1)]
-segment_lengths = [64]
+mike_model = MikeModel(4, cable_positions[0], segment_lengths[0])
 
-print(
-    q_to_l_kappa_phi(
-        camarillo_constant_curvature_no_slack(
-            delta_lengths,
-            cable_positions,
-            segment_stiffness_vals,
-            cable_stiffness_vals,
-            segment_lengths,
-        ),
-        64,
-    )
+dls = np.zeros(4)
+dls = np.array([-1, 0, 1, 1])
+
+
+camarillo_output = camarillo_2_webster_params(
+    (camarillo_model.forward(dls, True)), camarillo_model.segment_lengths
 )
+
+
+mike_output = mike_2_webster_params(mike_model.forward(dls))
+
+ax = plot_robot(camarillo_output)
+ax = plot_robot(mike_output, ax=ax)
+plt.show()

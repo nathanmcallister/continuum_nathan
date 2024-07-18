@@ -2,59 +2,37 @@
 from typing import List, Tuple
 import datetime
 import numpy as np
-import camarillo_cc
-import utils_cc
+from camarillo_cc import CamarilloModel
+from utils_cc import camarillo_2_webster_params
 import utils_data
 import kinematics
 
 
 def generate_babble_data(
-    cable_positions: List[Tuple[float, ...]],
-    segment_stiffness_vals: List[Tuple[float, ...]],
-    cable_stiffness_vals: List[Tuple[float, ...]],
-    segment_lengths: List[float],
+    model: CamarilloModel,
     num_measurements: int = 2**16,
     cable_range: float = 12,
     pos_noise_std: float = 0.5,
     tang_noise_std: float = 0.05,
 ) -> List[utils_data.DataContainer]:
-    num_cables = sum([len(x) for x in cable_positions])
-    num_segments = len(segment_lengths)
 
     now = datetime.datetime.now()
     date = (now.year, now.month, now.day)
     time = (now.hour, now.minute, now.second)
 
-    cable_deltas = np.zeros((num_cables, num_measurements))
+    rng = np.random.default_rng()
+
+    cable_deltas = (
+        2 * cable_range * (rng.random((model.num_cables, num_measurements)) - 0.5)
+    )
     positions = np.zeros((3, num_measurements))
     orientations = np.zeros((3, num_measurements))
 
-    rng = np.random.default_rng()
-
     for i in range(num_measurements):
-        rand_deltas = 2 * cable_range * (rng.random(num_cables) - 0.5)
-        cable_deltas[:, i] = rand_deltas
 
-        dls = []
-        previous_cables = 0
-        for s in range(num_segments):
-            cables_in_segment = len(cable_positions[s])
-            dls.append(
-                tuple(
-                    rand_deltas[previous_cables : previous_cables + cables_in_segment]
-                )
-            )
-            previous_cables += cables_in_segment
-
-        camarillo_params = camarillo_cc.no_slack_model(
-            dls,
-            cable_positions,
-            segment_stiffness_vals,
-            cable_stiffness_vals,
-            segment_lengths,
-        )
-        webster_params = utils_cc.camarillo_2_webster_params(
-            camarillo_params, segment_lengths
+        camarillo_params = model.forward(cable_deltas[:, i])
+        webster_params = camarillo_2_webster_params(
+            camarillo_params, model.segment_lengths
         )
 
         T_list = utils_cc.calculate_transforms(webster_params)

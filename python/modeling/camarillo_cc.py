@@ -1,5 +1,4 @@
 import numpy as np
-import ipyopt
 from scipy.optimize import minimize, Bounds, LinearConstraint
 from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
@@ -65,9 +64,9 @@ class CamarilloModel:
 
     def forward(self, dls: np.ndarray, handle_slack: bool = False) -> np.ndarray:
         assert len(dls) == self.num_cables
+        dls = -dls
 
         if handle_slack:
-            raise NotImplemented
 
             def min_fcn(delta, dls):
                 return delta @ self.C_m_inv @ (delta + dls)
@@ -78,13 +77,31 @@ class CamarilloModel:
             def min_hess(delta):
                 return self.C_m_inv + self.C_m_inv_trans
 
+            linear_constraint = LinearConstraint(
+                self.C_m_inv, -self.C_m_inv @ dls, np.full(dls.shape, np.inf)
+            )
+            bounds = Bounds(np.zeros(dls.shape), np.full(dls.shape, np.inf))
+
+            results = minimize(
+                lambda x: min_fcn(x, dls),
+                np.zeros(dls.shape),
+                method="trust-constr",
+                jac=lambda x: min_der(x, dls),
+                hess=min_hess,
+                constraints=[linear_constraint],
+                bounds=bounds,
+                options={"gtol": 1e-9},
+            )
+
+            return self.A @ (dls + results.x)
+
         else:
             return self.A @ dls
 
     def inverse(self, camarillo_params: np.ndarray) -> np.ndarray:
         assert len(camarillo_params) / 3 == self.num_segments
 
-        return self.A_inv @ camarillo_params
+        return -(self.A_inv @ camarillo_params)
 
     def __get_camarillo_matrices(self):
 
