@@ -2,6 +2,90 @@ from math import sin, cos, pi, sqrt, atan2
 from typing import List, Tuple
 
 
+class MikeModel:
+    """
+    A constant curvature model based on Mike's original model, but adapted to use
+    arbitrary cable positions.  Currently limited to one segment.
+
+    Attributes:
+        num_cables: The number of cables the system has
+        cable_positions: A list of tuples (x, y) containing the locations of the
+        cables
+        segment_length: The length of the segment
+
+    Methods:
+        forward: Takes input cable displacements and outputs the corresponding Mike
+        parameters
+        inverse: Takes input Mike parameters and outputs the corresponding cable
+        displacements
+    """
+
+    def __init__(
+        self,
+        num_cables: int,
+        cable_positions: List[Tuple[float, ...]],
+        segment_length: float,
+    ):
+        assert num_cables == len(cable_positions)
+        self.num_cables = num_cables
+        self.cable_positions = cable_positions
+        self.segment_length = segment_length
+
+    def forward(self, dls: np.ndarray):
+        assert len(dls) == self.num_cables
+
+        phi_numerator = (
+            dls[0] * self.cable_positions[1][0] - dls[1] * self.cable_positions[0][0]
+        )
+        phi_denomenator = (
+            dls[1] * self.cable_positions[0][1] - dls[0] * self.cable_positions[1][1]
+        )
+
+        phi = atan2(phi_numerator, phi_denomenator)
+
+        theta_numerator = (dls[:2] ** 2).sum()
+        theta_denomenator = (
+            self.cable_positions[0][0] * cos(phi)
+            + self.cable_positions[0][1] * sin(phi)
+        ) ** 2 + (
+            self.cable_positions[1][0] * cos(phi)
+            + self.cable_positions[1][1] * sin(phi)
+        ) ** 2
+
+        if theta_denomenator != 0:
+            theta = sqrt(theta_numerator / theta_denomenator)
+        else:
+            theta = 0
+
+        return np.array([self.segment_length, theta, phi])
+
+    def inverse(self, mike_params: np.ndarray):
+
+        if len(mike_params) == 2:
+            theta = mike_params[0]
+            phi = mike_params[1]
+
+        elif len(mike_params) == 3:
+            theta = mike_params[1]
+            phi = mike_params[2]
+
+        else:
+            raise Exception("Size of input parameters is invalid")
+
+        dls = np.array(
+            [
+                -(
+                    self.cable_positions[i][0] * cos(phi)
+                    + self.cable_positions[i][1] * sin(phi)
+                )
+                * theta
+                for i in range(len(self.cable_positions))
+            ]
+        )
+
+        return dls
+
+
 def one_seg_forward_kinematics(
     delta_la: float,
     delta_lb: float,

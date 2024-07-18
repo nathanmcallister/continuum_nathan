@@ -6,7 +6,7 @@ from typing import List, Tuple
 from utils_cc import *
 
 
-class CamarilloSpine:
+class CamarilloModel:
 
     def __init__(
         self,

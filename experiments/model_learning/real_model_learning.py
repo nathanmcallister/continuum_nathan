@@ -13,10 +13,10 @@ import utils_cc
 import utils_data
 import kinematics
 
-TRAINING_ITERATIONS = 2
+TRAINING_ITERATIONS = 10
 
 # Input filenames
-data_filename = "../motor_babble/output/kinematic_2024_07_03_16_58_17.dat"
+data_filename = "./training_data/kinematic_2024_07_16_21_33_12.dat"
 
 # Data loading
 dataset = ANN.Dataset(data_filename)

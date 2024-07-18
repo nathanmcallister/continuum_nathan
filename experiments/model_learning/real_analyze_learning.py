@@ -8,7 +8,7 @@ num_iterations = 10
 # File inputs
 # Datacontainer
 container = utils_data.DataContainer()
-container.file_import("./training_data/kinematic_2024_05_09_20_11_13.dat")
+container.file_import("./training_data/kinematic_2024_07_16_21_33_12.dat")
 container.clean()
 _, pos, _ = container.to_numpy()
 
@@ -16,7 +16,7 @@ _, pos, _ = container.to_numpy()
 train_loss = np.concatenate(
     [
         np.loadtxt(
-            f"output/real_05_12_2024a/real_train_loss_{i}.dat", delimiter=","
+            f"output/real_07_17_2024/real_train_loss_{i}.dat", delimiter=","
         ).reshape((1, -1))
         for i in range(num_iterations)
     ],
@@ -27,7 +27,7 @@ train_loss = np.concatenate(
 validation_loss = np.concatenate(
     [
         np.loadtxt(
-            f"output/real_05_12_2024a/real_validation_loss_{i}.dat",
+            f"output/real_07_17_2024/real_validation_loss_{i}.dat",
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -36,8 +36,8 @@ validation_loss = np.concatenate(
 )
 
 # Test loss vs model
-pos_loss = np.loadtxt("output/real_05_12_2024a/real_pos_test_loss.dat", delimiter=",")
-tang_loss = np.loadtxt("output/real_05_12_2024a/real_tang_test_loss.dat", delimiter=",")
+pos_loss = np.loadtxt("output/real_07_17_2024/real_pos_test_loss.dat", delimiter=",")
+tang_loss = np.loadtxt("output/real_07_17_2024/real_tang_test_loss.dat", delimiter=",")
 
 avg_pos_loss = pos_loss.mean(axis=0)
 avg_tang_loss = tang_loss.mean(axis=0)

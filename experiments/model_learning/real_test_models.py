@@ -13,7 +13,7 @@ dataset = ANN.Dataset()
 dataset.load_from_file(test_file)
 dataset.clean()
 
-model_files = glob.glob("models/real_05_12_2024a/*.pt")
+model_files = glob.glob("models/real_07_17_2024/*.pt")
 
 model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss()
