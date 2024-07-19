@@ -43,10 +43,13 @@ def update_symlinks(directory_path):
 
                 # If it is found, create a symlink
                 if symlink_glob:
-                    if (directory_path / symlink).exists():
-                        os.remove(directory_path / symlink)
+                    try:
+                        (directory_path / symlink).unlink()
 
-                    os.symlink(symlink_glob[0], directory_path / symlink)
+                    except:
+                        pass
+
+                    (directory_path / symlink).symlink_to(Path(symlink_glob[0]))
 
                 else:
                     print(f"\033[91mInvalid file ({symlink}) in symlinks.txt\033[0m")
