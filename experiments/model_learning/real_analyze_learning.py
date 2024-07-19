@@ -115,15 +115,15 @@ plt.xlabel("Model")
 plt.ylabel("Orientation Error (degrees)")
 
 plt.figure()
-plt.hist(pos_loss[8, :], 50)
-plt.title(f"Position Error of Best Model (Mean: {avg_pos_loss[8]:.3f} mm)")
+plt.hist(pos_loss[6, :], 50)
+plt.title(f"Position Error of Best Model (Mean: {avg_pos_loss[6]:.3f} mm)")
 plt.xlabel("Position Error (mm)")
 plt.ylabel("Count")
 
 plt.figure()
-plt.hist(180 / np.pi * tang_loss[8, :], 50)
+plt.hist(180 / np.pi * tang_loss[6, :], 50)
 plt.title(
-    f"Orientation Error of Best Model (Mean: ${180/np.pi*avg_tang_loss[8]:.3f}^\circ$)"
+    f"Orientation Error of Best Model (Mean: ${180/np.pi*avg_tang_loss[6]:.3f}^\circ$)"
 )
 plt.xlabel("Orientation Error (degrees)")
 plt.ylabel("Count")

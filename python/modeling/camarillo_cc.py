@@ -51,6 +51,9 @@ class CamarilloModel:
         self.segment_lengths = segment_lengths
         self.additional_cable_length = additional_cable_length
 
+        self.update_matrices()
+
+    def update_matrices(self):
         D, K_m_inv, L_0, L_t, K_t_inv = self.__get_camarillo_matrices()
         self.C_m = np.matmul(
             np.matmul(np.matmul(np.transpose(D), L_0), K_m_inv), D
