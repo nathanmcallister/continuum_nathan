@@ -1,1 +1,1 @@
-/home/cam/github/continuum_cam/python/kinematics.py
+/Users/nathanmcallister/Documents/GitHub/continuum_nathan/python/kinematics.py

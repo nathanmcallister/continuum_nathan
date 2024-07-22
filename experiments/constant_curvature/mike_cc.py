@@ -1,1 +1,1 @@
-/home/cam/github/continuum_cam/python/modeling/mike_cc.py
+/Users/nathanmcallister/Documents/GitHub/continuum_nathan/python/modeling/mike_cc.py

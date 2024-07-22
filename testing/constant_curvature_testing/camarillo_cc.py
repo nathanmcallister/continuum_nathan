@@ -1,1 +1,1 @@
-/home/cam/github/continuum_cam/python/modeling/camarillo_cc.py
+/Users/nathanmcallister/Documents/GitHub/continuum_nathan/python/modeling/camarillo_cc.py

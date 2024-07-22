@@ -1,1 +1,1 @@
-/home/cam/github/continuum_cam/python/continuum_aurora.py
+/Users/nathanmcallister/Documents/GitHub/continuum_nathan/python/continuum_aurora.py
