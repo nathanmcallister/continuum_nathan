@@ -13,7 +13,7 @@ model.load("models/real_07_17_2024/2024_07_17_19_42_23.pt")
 
 file = open(r"point_mesh.txt", "w")
 
-mesh_range = np.linspace(-2, 2, 10)
+mesh_range = np.linspace(-12, 12, 12)
 positions = [mesh_range, mesh_range, mesh_range, mesh_range]
 points = list(itertools.product(*positions))
 
@@ -30,7 +30,7 @@ for i in range(np.size(points, 0)):
 print("{} points written to point_mesh.txt".format(np.size(points, 0)))
 file.close()
 
-# # verify points via plot
+# verify points via plot
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
@@ -47,5 +47,3 @@ z = data.iloc[:, 2]
 
 ax.scatter(x, y, z)
 plt.show()
-
-
