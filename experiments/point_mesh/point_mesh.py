@@ -7,6 +7,15 @@ from kinematics import tang_2_dcm, dcm_2_quat
 import itertools
 import pandas
 
+''' 
+created 7/22/25 by Nathan McAllister
+
+    Generates mesh of points from a model and writes them to a .txt
+    .txt file can be brought into solidworks via Scan to 3D feature to create a surface
+    this is useful for designing an accurate phantom or any surface that the arm can trace
+    
+    '''
+
 def generate_mesh(model, lengths, file):
 
     # for each set of cable lengths
@@ -58,13 +67,13 @@ def plot_cross_section(filename):
 model = Model(4, 6, [32, 32])
 model.load("models/real_07_17_2024/2024_07_17_19_42_23.pt")
 
-mesh_range = np.linspace(0, 12, 20)
+mesh_range = np.linspace(-12, 0, 20)
 positions = [mesh_range, mesh_range, mesh_range, mesh_range]
 lengths = list(itertools.product(*positions))
 filename = r"point_mesh.txt"
 
 file = open(filename, "w")
-loose = [-12]
+loose = [12]
 
 range_q1 = [mesh_range, mesh_range, loose, loose]
 lengths_q1 = list(itertools.product(*range_q1))
@@ -83,4 +92,8 @@ lengths_q4 = list(itertools.product(*range_q4))
 generate_mesh(model, lengths_q4, file)
 
 print("{} points written to point_mesh.txt".format(4 * np.size(lengths_q1, 0)))
+file.close()
+
+file = open(filename, "r")
+plot_cross_section(filename)
 file.close()
