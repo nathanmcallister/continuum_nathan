@@ -5,6 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 import ANN
+from kinematics import quat_2_dcm, tang_2_dcm
 import camarillo_cc
 import kinematics
 import utils_cc
@@ -21,10 +22,10 @@ model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
 )
 
-model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
+model.load("../model_learning/models/real_07_17_2024/2024_07_17_19_42_23.pt")
 model.model.eval()
 
-array = np.array([-12, -12, -12, -12])
+array = list(np.float_([-12, -12, -12, -12]))
 
 tensor = torch.tensor(array)
 output = model(tensor)
@@ -43,6 +44,8 @@ def loss_fcn(
     dl_tensor = torch.tensor(dl, requires_grad=True)
     model.zero_grad()
     x_hat = model(dl_tensor)[0:3]
+    # x_hat = extend_z(model(dl_tensor)[0:3], tang_2_dcm(model(dl_tensor)[3:6]), 13) # added height of electrode array housing
+    print("tip pos = {} \nelectrode pos = {}".format(model(dl_tensor)[0:3].detach().numpy(), x_hat.detach().numpy()))
 
     e = x_hat - x_star
     delta_dl = dl_tensor - dl_0
@@ -54,6 +57,26 @@ def loss_fcn(
 
     return (loss.item(), grad)
 
+def extend_z(pos, rot, length):
+    """
+    Translate a transfrom in its Z direction.
+    
+    Input
+    :param pos: 3 element position list (x,y,z)
+    :param rot: 3x3 rotation matrix
+    :param length: distance to translate
+    
+    Output
+    :return: new 3 element position array
+    """
+    pos = pos.detach().numpy()
+
+    z_dir = np.multiply(rot[2, :3], [-1, -1, 1])
+    # print("z direction = {}".format(z_dir))
+    new_pos = np.add(length * z_dir, pos)
+    new_pos = torch.tensor(new_pos)
+
+    return new_pos
 
 open_loop_dls = np.zeros((4, num_points))
 
