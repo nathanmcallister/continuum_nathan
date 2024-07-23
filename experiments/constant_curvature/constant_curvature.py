@@ -8,6 +8,7 @@ from mike_cc import MikeModel
 import utils_cc
 from utils_data import DataContainer
 from kinematics import dcm_2_tang, tang_2_dcm
+import kinematics
 
 """ 
 constant_curvature.py
