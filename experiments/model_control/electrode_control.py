@@ -4,17 +4,24 @@ import scipy.optimize as opt
 import torch
 import matplotlib.pyplot as plt
 from typing import List, Tuple
+from math import factorial
 import ANN
 import camarillo_cc
 import kinematics
 import utils_cc
 import utils_data
 
-trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",")
+trajectory = np.loadtxt("output/trajectory.dat", delimiter=",", dtype=np.float64)
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
 num_closed_loop_steps = 11
 step_size = 1
+
+T_electrode_2_tip = np.loadtxt(
+    Path("../../tools/T_electrode_2_tip"), delimiter=",", dtype=np.float64
+)
+
+T_electrode_2_tip_tensor = torch.from_numpy(T_electrode_2_tip)
 
 
 model = ANN.Model(
@@ -23,13 +30,6 @@ model = ANN.Model(
 
 model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
 model.model.eval()
-
-array = np.array([-12, -12, -12, -12])
-
-tensor = torch.tensor(array)
-output = model(tensor)
-# tensor([0, 0, 64, 0, 0, 0])
-output_pos = output[:3]
 
 
 def loss_fcn(
@@ -42,7 +42,46 @@ def loss_fcn(
 
     dl_tensor = torch.tensor(dl, requires_grad=True)
     model.zero_grad()
-    x_hat = model(dl_tensor)[0:3]
+
+    out = model(dl_tensor)
+
+    def skew(vec: torch.tensor) -> torch.tensor:
+        """
+        Generates a skew symmetric matrix (used for tang map)
+
+        Args:
+            vec: A vector of dimension 3
+
+        Returns:
+            A skew symmetric 3 x 3 matrix
+        """
+        assert len(vec) == 3
+        out = torch.zeros((3, 3))
+
+        out[0, 1] = -vec[2]
+        out[0, 2] = vec[1]
+        out[1, 0] = vec[2]
+        out[1, 2] = -vec[0]
+        out[2, 0] = -vec[1]
+        out[2, 1] = vec[0]
+
+        return out
+
+    def matrix_exponential(tang: torch.tensor) -> torch.tensor:
+        tilde = skew(tang)
+
+        out = torch.zeros((3, 3))
+        for i in range(10):
+            out += torch.linalg.matrix_power(tilde, i + 1) / factorial(i + 1)
+
+        return out
+
+    T_tip_2_model = torch.identity(4)
+    T_tip_2_model[:3, 3] = out[:3]
+    T_tip_2_model[:3, :3] = matrix_exponential(out[3:])
+
+    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip_tensor
+    x_hat = T_electrode_2_model[:3, 3]
 
     e = x_hat - x_star
     delta_dl = dl_tensor - dl_0
@@ -78,4 +117,4 @@ for i in range(num_points):
     )
     open_loop_dls[:, i] = result["x"]
 
-np.savetxt("output/nathan_cable_trajectory.dat", open_loop_dls, delimiter=",")
+np.savetxt("output/cable_trajectory.dat", open_loop_dls, delimiter=",")

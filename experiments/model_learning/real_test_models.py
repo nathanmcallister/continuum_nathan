@@ -7,7 +7,7 @@ import glob
 import ANN
 import utils_data
 
-test_file = "training_data/meas_2024_05_12_18_47_41.dat"
+test_file = "training_data/meas_2024_07_22_20_31_19.dat"
 
 dataset = ANN.Dataset()
 dataset.load_from_file(test_file)
