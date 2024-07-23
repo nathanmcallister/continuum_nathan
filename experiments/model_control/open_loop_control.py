@@ -16,7 +16,7 @@ T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
 T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
 
 wait_time = 1
-repetitions = 8
+repetitions = 1
 ns2s = 10 ** (-9)
 trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",")
 cable_trajectory = np.loadtxt("output/nathan_cable_trajectory.dat", delimiter=",")
@@ -32,7 +32,7 @@ time.sleep(2)
 model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
 )
-model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
+model.load("../model_learning/models/real_07_17_2024/2024_07_17_19_42_23.pt")
 model.model.eval()
 
 model_pos = np.nan * np.zeros((3, num_points * repetitions))

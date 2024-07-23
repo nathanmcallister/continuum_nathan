@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from ANN import Model
-from kinematics import tang_2_dcm, dcm_2_quat
+from kinematics import tang_2_dcm, dcm_2_quat, quat_2_dcm
 import itertools
 import pandas
 
@@ -24,10 +24,11 @@ def generate_mesh(model, lengths, file):
         # get position & tang from forward model
         tensor = torch.tensor(lengths[i])
         output = model(tensor)
-        output_pos = output[:3].detach().numpy()
+        output_pos_seg = output[:3].detach().numpy()
         output_tang = output[3:6].detach().numpy()
         output_quat = dcm_2_quat(tang_2_dcm(output_tang))
-        output_line = [*output_pos, *output_quat]
+        output_pos_cap = extend_z(output_pos_seg, output_quat, 13)
+        output_line = [*output_pos_cap, *output_quat]
 
         # then write to file
         for j in range(np.size(output_line)):
@@ -35,6 +36,26 @@ def generate_mesh(model, lengths, file):
                 file.write(str(output_line[j]) + ",")
             else:
                 file.write(str(output_line[j]) + "\n")
+
+def extend_z(pos, quat, length):
+    """
+    Translate a transfrom in its Z direction.
+    
+    Input
+    :param pos: 3 element position list (x,y,z)
+    :param quat: 4 element quaternion array (q1, q2, q3, q4)
+    :param length: distance to translate
+    
+    Output
+    :return: new 3 element position array
+    """
+    
+    rot = quat_2_dcm(quat) # quat_2_rot(quat)
+    z_dir = np.multiply(rot[2, :3], [-1, -1, 1])
+    # print("z direction = {}".format(z_dir))
+    new_pos = (length * z_dir) + pos
+
+    return new_pos
 
 
 def plot_cross_section(filename):
@@ -52,8 +73,8 @@ def plot_cross_section(filename):
     x = data.iloc[:,0]; y = data.iloc[:,1]; z = data.iloc[:,2]
 
     # selecting specific range of x values
-    mask = (x>-1)*(x<1)
-    x = x[mask]; y = y[mask]; z = z[mask]
+    # mask = (x>-1)*(x<1)
+    # x = x[mask]; y = y[mask]; z = z[mask]
 
     # plot
     ax.scatter(y, z)
