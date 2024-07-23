@@ -46,6 +46,7 @@ segment_length = 64
 cc_model = MikeModel(num_cables, cable_positions, segment_length)
 
 # Initialize Aurora and Arduino
+probe_list = ["0A"]
 aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
 arduino = ContinuumArduino()
 
@@ -120,6 +121,7 @@ if sweep_phi:
                         aurora_transform = aurora.get_aurora_transforms(probe_list)
 
                         T = aurora.get_T_tip_2_model(aurora_transform["0A"])
+                        break
 
                     except:
                         counter += 1
@@ -143,11 +145,13 @@ if sweep_phi:
 
                 # Get data from aurora
                 counter = 0
+                collecting
                 while counter < transform_attempts:
                     try:
                         aurora_transform = aurora.get_aurora_transforms(probe_list)
 
                         T = aurora.get_T_tip_2_model(aurora_transform["0A"])
+                        break
 
                     except:
                         counter += 1
@@ -185,6 +189,7 @@ else:
                         aurora_transform = aurora.get_aurora_transforms(probe_list)
 
                         T = aurora.get_T_tip_2_model(aurora_transform["0A"])
+                        break
 
                     except:
                         counter += 1
@@ -213,6 +218,7 @@ else:
                         aurora_transform = aurora.get_aurora_transforms(probe_list)
 
                         T = aurora.get_T_tip_2_model(aurora_transform["0A"])
+                        break
 
                     except:
                         counter += 1
