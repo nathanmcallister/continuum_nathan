@@ -15,7 +15,7 @@ class ContinuumArduino:
     def __init__(
         self,
         num_motors: int = 4,
-        setpoint_filename: str = "../../tools/motor_setpoints",
+        setpoint_filename: str = Path("../../tools/motor_setpoints"),
         wheel_radii: np.ndarray = np.array([15, 15, 15, 15], dtype=float),
         oscillator_frequency_kHz: int = 25_000,
         servo_frequency: int = 324,
@@ -48,7 +48,7 @@ class ContinuumArduino:
         assert 0 < num_motors <= 16
         self.num_motors = num_motors
         if setpoint_filename:
-            self.motor_setpoints = self.load_motor_setpoints(setpoint_filename)
+            self.load_motor_setpoints(setpoint_filename)
         else:
             self.motor_setpoints = np.full(num_motors, int((self.servo_min + self.servo_max) // 2))
         self.wheel_radii = wheel_radii
