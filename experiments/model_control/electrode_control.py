@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple
 from math import factorial
 import ANN
+from pathlib import Path
 import camarillo_cc
 import kinematics
 import utils_cc
@@ -76,11 +77,11 @@ def loss_fcn(
 
         return out
 
-    T_tip_2_model = torch.identity(4)
+    T_tip_2_model = torch.eye(4)
     T_tip_2_model[:3, 3] = out[:3]
     T_tip_2_model[:3, :3] = matrix_exponential(out[3:])
 
-    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip_tensor
+    T_electrode_2_model = torch.multiply(T_tip_2_model,  T_electrode_2_tip_tensor)
     x_hat = T_electrode_2_model[:3, 3]
 
     e = x_hat - x_star
