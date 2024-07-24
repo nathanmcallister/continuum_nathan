@@ -13,6 +13,7 @@ import utils_cc
 import utils_data
 
 trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",", dtype=np.float64)
+print(trajectory)
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
 num_closed_loop_steps = 11
