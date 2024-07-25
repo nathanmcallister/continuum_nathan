@@ -12,7 +12,9 @@ import kinematics
 import utils_cc
 import utils_data
 
-trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",", dtype=np.float64)
+trajectory = np.loadtxt(
+    Path("output/nathan_trajectory.dat"), delimiter=",", dtype=np.float64
+)
 print(trajectory)
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
@@ -78,11 +80,12 @@ def loss_fcn(
 
         return out
 
-    T_tip_2_model = torch.eye(4)
+    T_tip_2_model = torch.eye(4, dtype=torch.double)
     T_tip_2_model[:3, 3] = out[:3]
     T_tip_2_model[:3, :3] = matrix_exponential(out[3:])
+    T_tip_2_model.dtype
 
-    T_electrode_2_model = torch.multiply(T_tip_2_model,  T_electrode_2_tip_tensor)
+    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip_tensor
     x_hat = T_electrode_2_model[:3, 3]
 
     e = x_hat - x_star
