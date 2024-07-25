@@ -6,12 +6,14 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple
 from math import factorial
 import ANN
+from pathlib import Path
 import camarillo_cc
 import kinematics
 import utils_cc
 import utils_data
 
-trajectory = np.loadtxt("output/trajectory.dat", delimiter=",", dtype=np.float64)
+trajectory = np.loadtxt("output/nathan_trajectory.dat", delimiter=",", dtype=np.float64)
+print(trajectory)
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
 num_closed_loop_steps = 11
@@ -28,7 +30,7 @@ model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PositionLoss()
 )
 
-model.load("../model_learning/models/real_05_12_2024a/2024_05_12_19_56_49.pt")
+model.load("../model_learning/models/real_07_17_2024/2024_07_17_19_42_23.pt")
 model.model.eval()
 
 
@@ -76,11 +78,11 @@ def loss_fcn(
 
         return out
 
-    T_tip_2_model = torch.identity(4)
+    T_tip_2_model = torch.eye(4)
     T_tip_2_model[:3, 3] = out[:3]
     T_tip_2_model[:3, :3] = matrix_exponential(out[3:])
 
-    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip_tensor
+    T_electrode_2_model = torch.multiply(T_tip_2_model,  T_electrode_2_tip_tensor)
     x_hat = T_electrode_2_model[:3, 3]
 
     e = x_hat - x_star
@@ -117,4 +119,4 @@ for i in range(num_points):
     )
     open_loop_dls[:, i] = result["x"]
 
-np.savetxt("output/cable_trajectory.dat", open_loop_dls, delimiter=",")
+np.savetxt("output/nathan_cable_trajectory.dat", open_loop_dls, delimiter=",")

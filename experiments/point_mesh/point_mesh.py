@@ -73,8 +73,8 @@ def plot_cross_section(filename):
     x = data.iloc[:,0]; y = data.iloc[:,1]; z = data.iloc[:,2]
 
     # selecting specific range of x values
-    # mask = (x>-1)*(x<1)
-    # x = x[mask]; y = y[mask]; z = z[mask]
+    mask = (x>-1)*(x<1)
+    x = x[mask]; y = y[mask]; z = z[mask]
 
     # plot
     ax.scatter(y, z)
