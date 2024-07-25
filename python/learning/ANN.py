@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import List, Tuple
 import numpy as np
 import os
+from tqdm import tqdm
 from pathlib import Path
 import datetime
 import utils_data
@@ -120,14 +121,18 @@ class Model(nn.Module):
 
             train_loss += loss.item()
 
-            if batch % 64 == 0:
-                current_loss, current = loss.item(), (batch + 1) * len(X)
+            if batch % 32 == 0:
+                current = (batch + 1) * len(X)
                 print(
-                    f"Loss: {current_loss:>7f} [{current:>5d}/{size:>5d}]",
+                    f"Avg train loss: {train_loss / (batch+1):>7f} [{current:>5d}/{size:>5d}]",
                     flush=True,
+                    end="\r",
                 )
-
         train_loss /= num_batches
+        print(
+            f"Avg train loss: {train_loss:>7f} [{size:>5d}/{size:>5d}]",
+            flush=True,
+        )
 
         return train_loss
 
@@ -360,10 +365,10 @@ class Dataset(Dataset):
         self.num_measurements = data.num_measurements
 
         # Convert numpy arrays to tensors and put them in the input and output arrays
-        self.inputs = [torch.from_numpy(input).to(self.device) for input in data.inputs]
-        self.outputs = [
+        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in data.inputs])
+        self.outputs = torch.stack([
             torch.from_numpy(output).to(self.device) for output in data.outputs
-        ]
+        ])
 
     def from_raw(
         self,
@@ -400,8 +405,8 @@ class Dataset(Dataset):
         self.num_coils = num_coils
         self.num_measurements = len(inputs)
         # Convert lists of numpy arrays to lists of tensors
-        self.inputs = [torch.from_numpy(input).to(self.device) for input in inputs]
-        self.outputs = [torch.from_numpy(output).to(self.device) for output in outputs]
+        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in inputs])
+        self.outputs = torch.stack([torch.from_numpy(output).to(self.device) for output in outputs])
 
     def from_numpy(
         self,
@@ -441,26 +446,26 @@ class Dataset(Dataset):
         self.num_measurements = len(inputs)
 
         # Converts numpy arrays to lists of tensors
-        self.inputs = [
+        self.inputs = torch.stack([
             torch.from_numpy(inputs[:, i]).to(self.device)
             for i in range(self.num_measurements)
-        ]
-        self.outputs = [
+        ])
+        self.outputs = torch.stack([
             torch.from_numpy(outputs[:, i]).to(self.device)
             for i in range(self.num_measurements)
-        ]
+        ])
 
     def __len__(self) -> int:
         """
         Returns number of items in Dataset
         """
-        return len(self.inputs)
+        return self.inputs.shape[0]
 
     def __getitem__(self, idx):
         """
         Gets the (input, output) datapoint at the given index
         """
-        return self.inputs[idx], self.outputs[idx]
+        return self.inputs[idx, :], self.outputs[idx, :]
 
     def save(self, filename: str = "dataset_out.txt"):
         """
@@ -480,20 +485,21 @@ class Dataset(Dataset):
         bad_indices = []
         for i in range(len(self)):
             # Check for nan
-            has_nan = np.isnan(self.inputs[i]).any() or np.isnan(self.outputs[i]).any()
+            has_nan = np.isnan(self.inputs[i, :]).any() or np.isnan(self.outputs[i, :]).any()
             # Position is outside valid domain
-            bad_pos = (np.abs(self.outputs[i][:3]) > pos_threshold).any()
+            bad_pos = (np.abs(self.outputs[i, :][:3]) > pos_threshold).any()
             # orientation is outside valid domain
-            bad_tang = (np.abs(self.outputs[i][3:]) > tang_threshold).any()
+            bad_tang = (np.abs(self.outputs[i, :][3:]) > tang_threshold).any()
 
             if has_nan or bad_pos or bad_tang:
                 bad_indices.append(i)
 
         # Remove all bad indices from Dataset, taking into account number of measurements removed
-        for idx in sorted(bad_indices, reverse=True):
-            self.inputs.pop(idx)
-            self.outputs.pop(idx)
-            self.num_measurements -= 1
+        good_indices = np.logical_not(np.isin(np.arange(len(self)), bad_indices))
+
+        self.inputs = self.inputs[good_indices, :]
+        self.outputs = self.outputs[good_indices, :]
+        self.num_measurements = len(good_indices)
 
     def plot_pos(self, decimation: int = 10) -> plt.figure:
         """

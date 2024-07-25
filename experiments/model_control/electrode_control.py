@@ -15,7 +15,6 @@ import utils_data
 trajectory = np.loadtxt(
     Path("output/nathan_trajectory_v2.dat"), delimiter=",", dtype=np.float64
 )
-print(trajectory)
 trajectory_tensor = torch.tensor(trajectory)
 num_points = trajectory.shape[1]
 num_closed_loop_steps = 11
@@ -42,8 +41,8 @@ def loss_fcn(
     x_star: torch.tensor,
     dl_0: torch.tensor,
     weighting: Tuple[float, float],
+    T_electrode_2_tip: torch.tensor,
 ) -> Tuple[float, np.ndarray]:
-
     dl_tensor = torch.tensor(dl, requires_grad=True)
     model.zero_grad()
 
@@ -74,7 +73,7 @@ def loss_fcn(
     def matrix_exponential(tang: torch.tensor) -> torch.tensor:
         tilde = skew(tang)
 
-        out = torch.zeros((3, 3))
+        out = torch.eye(3, 3)
         for i in range(10):
             out += torch.linalg.matrix_power(tilde, i + 1) / factorial(i + 1)
 
@@ -83,9 +82,7 @@ def loss_fcn(
     T_tip_2_model = torch.eye(4, dtype=torch.double)
     T_tip_2_model[:3, 3] = out[:3]
     T_tip_2_model[:3, :3] = matrix_exponential(out[3:])
-    T_tip_2_model.dtype
-
-    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip_tensor
+    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip
     x_hat = T_electrode_2_model[:3, 3]
 
     e = x_hat - x_star
@@ -111,7 +108,9 @@ for i in range(num_points):
 
     x_star = trajectory_tensor[:, i].flatten()
 
-    optim_func = lambda x: loss_fcn(x, model, x_star, dl_0, (50.0, 1.0))
+    optim_func = lambda x: loss_fcn(
+        x, model, x_star, dl_0, (5.0, 1.0), T_electrode_2_tip_tensor
+    )
 
     result = opt.minimize(
         optim_func,

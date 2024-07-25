@@ -80,3 +80,14 @@ checkpoints
 ./experiments/repeatability/utils_data.py
 ./setup/servo_setup/continuum_arduino.py
 ./setup/spine_setup/continuum_arduino.py
+./testing/multi_input/utils_data.py
+./testing/multi_input/ANN.py
+./testing/multi_input/multi_input.py
+./experiments/multi_input_learning/kinematics.py
+./experiments/multi_input_learning/utils_data.py
+./experiments/multi_input_learning/ANN.py
+./experiments/multi_input_learning/multi_input.py
+./experiments/multi_input_control/kinematics.py
+./experiments/multi_input_control/utils_data.py
+./experiments/multi_input_control/ANN.py
+./experiments/multi_input_control/multi_input.py
