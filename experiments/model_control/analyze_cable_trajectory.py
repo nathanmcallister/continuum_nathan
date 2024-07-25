@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-cable_trajectory = np.loadtxt("output/rotated_cable_trajectory.dat", delimiter=",")
+cable_trajectory = np.loadtxt("output/nathan_cable_trajectory.dat", delimiter=",")
 
 plt.figure()
 plt.plot(cable_trajectory[0, :])

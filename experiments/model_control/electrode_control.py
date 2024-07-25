@@ -13,7 +13,7 @@ import utils_cc
 import utils_data
 
 trajectory = np.loadtxt(
-    Path("output/nathan_trajectory.dat"), delimiter=",", dtype=np.float64
+    Path("output/nathan_trajectory_v2.dat"), delimiter=",", dtype=np.float64
 )
 print(trajectory)
 trajectory_tensor = torch.tensor(trajectory)
