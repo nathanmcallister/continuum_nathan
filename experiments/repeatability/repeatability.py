@@ -1,12 +1,23 @@
 #!/bin/python3
 import numpy as np
 import time
+from pathlib import Path
 from continuum_arduino import ContinuumArduino
 from continuum_aurora import ContinuumAurora
 from kinematics import dcm_2_tang
 from utils_data import DataContainer
 
-# Define cable displacements for desired points
+# Script parameters
+wait_time = 4
+
+# Setup continuum robot
+T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
+T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
+
+aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
+arduino = ContinuumArduino()
+
+# Define parameters to determine cable displacements
 cable_length = np.array([0.0] + [6.0] * 8 + [12.0] * 8)
 cable_angle = np.concatenate([np.array([0.0]), np.arange(16) * 4 * np.pi / 16])
 
@@ -22,16 +33,11 @@ for i in range(16):
         ]
     )
 
-# Setup continuum robot
-T_aurora_2_model = np.loadtxt("../../tools/T_aurora_2_model", delimiter=",")
-T_tip_2_coil = np.loadtxt("../../tools/T_tip_2_coil", delimiter=",")
-
-aurora = ContinuumAurora(T_aurora_2_model, T_tip_2_coil)
-arduino = ContinuumArduino()
-
-# Define values for data collection
+# Calculate important script parameters
 num_points = len(cable_angle)
 num_measurements = 2 * num_points * (num_points - 1)
+
+# Allocate arrays for data collection
 num_range = np.array(list(range(num_points)))
 pos = np.nan * np.zeros((3, num_measurements))
 tang = np.nan * np.zeros((3, num_measurements))
