@@ -91,3 +91,8 @@ checkpoints
 ./experiments/multi_input_control/utils_data.py
 ./experiments/multi_input_control/ANN.py
 ./experiments/multi_input_control/multi_input.py
+./experiments/two_segment_learning/kinematics.py
+./experiments/two_segment_learning/utils_data.py
+./experiments/two_segment_learning/utils_cc.py
+./experiments/two_segment_learning/ANN.py
+./experiments/two_segment_learning/camarillo_cc.py
