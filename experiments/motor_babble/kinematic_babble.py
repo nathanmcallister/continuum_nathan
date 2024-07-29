@@ -13,8 +13,8 @@ ns2s = 10**-9
 motor_std = 4
 motor_range = 13
 num_motors = 4
-num_measurements = 2**14
-sample_period = 3.5
+num_measurements = 512 # 2**14
+sample_period = 4
 
 T_aurora_2_model = np.loadtxt(Path("../../tools/T_aurora_2_model"), delimiter=",")
 T_tip_2_coil = np.loadtxt(Path("../../tools/T_tip_2_coil"), delimiter=",")
