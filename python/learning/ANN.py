@@ -8,6 +8,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 from pathlib import Path
+import shutil
 import datetime
 import utils_data
 import matplotlib.pyplot as plt
@@ -258,6 +259,10 @@ class Model(nn.Module):
             print(
                 f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
             )
+
+            # Remove checkpoints to save storage
+            shutil.rmtree(checkpoints_path)
+
             self.model.eval()
 
             if save_model:
@@ -365,10 +370,12 @@ class Dataset(Dataset):
         self.num_measurements = data.num_measurements
 
         # Convert numpy arrays to tensors and put them in the input and output arrays
-        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in data.inputs])
-        self.outputs = torch.stack([
-            torch.from_numpy(output).to(self.device) for output in data.outputs
-        ])
+        self.inputs = torch.stack(
+            [torch.from_numpy(input).to(self.device) for input in data.inputs]
+        )
+        self.outputs = torch.stack(
+            [torch.from_numpy(output).to(self.device) for output in data.outputs]
+        )
 
     def from_raw(
         self,
@@ -405,8 +412,12 @@ class Dataset(Dataset):
         self.num_coils = num_coils
         self.num_measurements = len(inputs)
         # Convert lists of numpy arrays to lists of tensors
-        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in inputs])
-        self.outputs = torch.stack([torch.from_numpy(output).to(self.device) for output in outputs])
+        self.inputs = torch.stack(
+            [torch.from_numpy(input).to(self.device) for input in inputs]
+        )
+        self.outputs = torch.stack(
+            [torch.from_numpy(output).to(self.device) for output in outputs]
+        )
 
     def from_numpy(
         self,
@@ -446,14 +457,18 @@ class Dataset(Dataset):
         self.num_measurements = len(inputs)
 
         # Converts numpy arrays to lists of tensors
-        self.inputs = torch.stack([
-            torch.from_numpy(inputs[:, i]).to(self.device)
-            for i in range(self.num_measurements)
-        ])
-        self.outputs = torch.stack([
-            torch.from_numpy(outputs[:, i]).to(self.device)
-            for i in range(self.num_measurements)
-        ])
+        self.inputs = torch.stack(
+            [
+                torch.from_numpy(inputs[:, i]).to(self.device)
+                for i in range(self.num_measurements)
+            ]
+        )
+        self.outputs = torch.stack(
+            [
+                torch.from_numpy(outputs[:, i]).to(self.device)
+                for i in range(self.num_measurements)
+            ]
+        )
 
     def __len__(self) -> int:
         """
@@ -485,7 +500,9 @@ class Dataset(Dataset):
         bad_indices = []
         for i in range(len(self)):
             # Check for nan
-            has_nan = np.isnan(self.inputs[i, :]).any() or np.isnan(self.outputs[i, :]).any()
+            has_nan = (
+                np.isnan(self.inputs[i, :]).any() or np.isnan(self.outputs[i, :]).any()
+            )
             # Position is outside valid domain
             bad_pos = (np.abs(self.outputs[i, :][:3]) > pos_threshold).any()
             # orientation is outside valid domain

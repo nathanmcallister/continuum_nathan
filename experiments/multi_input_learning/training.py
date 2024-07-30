@@ -42,6 +42,7 @@ def train():
     train_loss, validation_loss = model.train(
         train_dataloader,
         validation_dataloader,
+        num_epochs=40,
         checkpoints=True,
         save_model=True,
     )
