@@ -95,7 +95,7 @@ class Model(nn.Module):
         """
         return self.model(x)
 
-    def train_epoch(self, dataloader: DataLoader) -> float:
+    def train_epoch(self, dataloader: DataLoader, print_output=True) -> float:
         """
         Performs one epoch of training on the model
 
@@ -121,23 +121,24 @@ class Model(nn.Module):
             self.optimizer.zero_grad()
 
             train_loss += loss.item()
-
-            if batch % 32 == 0:
-                current = (batch + 1) * len(X)
-                print(
-                    f"Avg train loss: {train_loss / (batch+1):>7f} [{current:>5d}/{size:>5d}]",
-                    flush=True,
-                    end="\r",
-                )
+            if print_output:
+                if batch % 32 == 0:
+                    current = (batch + 1) * len(X)
+                    print(
+                        f"Avg train loss: {train_loss / (batch+1):>7f} [{current:>5d}/{size:>5d}]",
+                        flush=True,
+                        end="\r",
+                    )
         train_loss /= num_batches
-        print(
-            f"Avg train loss: {train_loss:>7f} [{size:>5d}/{size:>5d}]",
-            flush=True,
-        )
+        if print_output:
+            print(
+                f"Avg train loss: {train_loss:>7f} [{size:>5d}/{size:>5d}]",
+                flush=True,
+            )
 
         return train_loss
 
-    def test_epoch(self, dataloader: DataLoader) -> float:
+    def test_epoch(self, dataloader: DataLoader, print_output=True) -> float:
         """
         Performs one epoch (all batches of test data) of testing on the model
 
@@ -159,7 +160,8 @@ class Model(nn.Module):
                 test_loss += self.loss(pred, y).item()
 
         test_loss /= num_batches
-        print(f"Avg test loss: {test_loss:>7f}", flush=True)
+        if print_output:
+            print(f"Avg test loss: {test_loss:>7f}", flush=True)
 
         return test_loss
 
@@ -194,6 +196,7 @@ class Model(nn.Module):
         num_epochs: int = 2048,
         checkpoints: bool = False,
         save_model: bool = False,
+        print_output: bool = True,
     ) -> Tuple[List[float], ...]:
         """
         Trains the model
@@ -227,11 +230,16 @@ class Model(nn.Module):
                 os.mkdir(checkpoints_path)
 
         for epoch in range(num_epochs):
-            print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
-            train_loss.append(self.train_epoch(train_dataloader))
+            if print_output:
+                print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
+            train_loss.append(
+                self.train_epoch(train_dataloader, print_output=print_output)
+            )
 
             if test_dataloader:
-                test_loss.append(self.test_epoch(test_dataloader))
+                test_loss.append(
+                    self.test_epoch(test_dataloader, print_output=print_output)
+                )
 
             if checkpoints:
                 file_path = checkpoints_path / f"epoch_{epoch+1}.pt"
@@ -256,9 +264,10 @@ class Model(nn.Module):
             )
 
             self.model.load_state_dict(checkpoint["model_state_dict"])
-            print(
-                f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
-            )
+            if print_output:
+                print(
+                    f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
+                )
 
             # Remove checkpoints to save storage
             shutil.rmtree(checkpoints_path)
