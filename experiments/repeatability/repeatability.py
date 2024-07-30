@@ -56,7 +56,7 @@ for i in range(num_points):
         print(i, j, 0, idx)
 
         # Move to other point
-        arduino.write(other_deltas[:, j])
+        arduino.write_dls(other_deltas[:, j])
         time.sleep(wait_time)
 
         # Collect data
@@ -88,6 +88,6 @@ container = DataContainer()
 container.prefix = "output/data"
 container.set_date_and_time()
 container.from_raw_data(
-    container.date, container.time, 4, num_measurements, cable_deltas, pos, tang
+    container.date, container.time, 4, num_measurements, ordered_deltas, pos, tang
 )
 container.file_export()
