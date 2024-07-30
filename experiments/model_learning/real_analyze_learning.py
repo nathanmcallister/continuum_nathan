@@ -79,7 +79,7 @@ plt.title("Average Batch Loss vs Epoch")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.legend()
-plt.ylim((1, 10))
+plt.ylim((1, 100))
 
 plt.figure()
 for i in range(0, 10, 2):

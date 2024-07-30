@@ -33,25 +33,45 @@ output_pos = output[:3]
 
 
 def loss_fcn(
-    dl: np.ndarray,
+    u: np.ndarray,
     model: ANN.Model,
-    x_star: torch.tensor,
-    dl_0: torch.tensor,
+    y_star: torch.tensor,
+    u_0: torch.tensor,
     weighting: Tuple[float, float],
 ) -> Tuple[float, np.ndarray]:
+    """
+    Finds the value of the loss function L(y) and its gradient.
 
-    dl_tensor = torch.tensor(dl, requires_grad=True)
+    Args:
+        u: The cable displacements fed into the model
+        model: The learned forward kinematics model
+        y_star: The desired tip position
+        u_0: The cable displacements at the previous timestep
+        weighting: Contains the diagonal value of Q and R
+
+    Returns:
+        The value of the loss function and its gradient
+    """
+
+    # Convert numpy array to tensor (requires_grad is used to extract gradient)
+    u_tensor = torch.tensor(u, requires_grad=True)
+
+    # Evaluate model and extract position
     model.zero_grad()
-    x_hat = model(dl_tensor)[0:3]
+    y_hat = model(dl_tensor)[0:3]
 
-    e = x_hat - x_star
-    delta_dl = dl_tensor - dl_0
+    # Calculate error and change in cable length
+    e = y_hat - y_star
+    delta_u = u_tensor - u_0
 
-    loss = torch.dot(e, e) * weighting[0] + torch.dot(delta_dl, delta_dl) * weighting[1]
+    # Calculate loss function
+    loss = torch.dot(e, e) * weighting[0] + torch.dot(delta_u, delta_u) * weighting[1]
 
+    # Obtain gradient of loss function based on inputs
     loss.backward()
-    grad = dl_tensor.grad.numpy()
+    grad = u_tensor.grad.numpy()
 
+    # Return loss function and its gradient
     return (loss.item(), grad)
 
 

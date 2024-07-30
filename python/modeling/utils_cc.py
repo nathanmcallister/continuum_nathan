@@ -134,12 +134,14 @@ def get_dh_params(param_tuple: Tuple[float, ...]) -> List[Tuple[float, ...]]:
     return [(0, l, 0, 0)]
 
 
-def calculate_transforms(webster_params: List[Tuple[float, ...]]) -> List[np.ndarray]:
+def calculate_transforms(webster_params: np.ndarray) -> List[np.ndarray]:
     T = np.eye(4, dtype=float)
     segment_transforms = []
+    assert len(webster_params) % 3 == 0
+    num_segments = len(webster_params) // 3
 
-    for param_tuple in webster_params:
-        dh_params = get_dh_params(param_tuple)
+    for i in range(num_segments):
+        dh_params = get_dh_params(webster_params[3 * i : 3 * (i + 1)])
 
         for dh_param in dh_params:
             new_T = dh_param_2_transform(dh_param)
