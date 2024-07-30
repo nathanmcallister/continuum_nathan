@@ -56,7 +56,7 @@ for i in range(num_points):
         print(i, j, 0, idx)
 
         # Move to other point
-        arduino.write(other_deltas[:, j])
+        arduino.write_dls(other_deltas[:, j])
         time.sleep(wait_time)
 
         # Collect data
