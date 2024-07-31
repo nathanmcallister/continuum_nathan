@@ -1,1 +1,1 @@
-C:/Users/nmcal/Documents/GitHub/continuum_nathan/python/modeling/camarillo_cc.py
+/home/cam/github/continuum_cam/python/modeling/camarillo_cc.py

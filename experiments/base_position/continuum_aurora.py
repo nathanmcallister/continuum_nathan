@@ -1,1 +1,1 @@
-C:/Users/nmcal/Documents/GitHub/continuum_nathan/python/continuum_aurora.py
+/home/cam/github/continuum_cam/python/continuum_aurora.py

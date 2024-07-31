@@ -8,6 +8,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 from pathlib import Path
+import shutil
 import datetime
 import utils_data
 import matplotlib.pyplot as plt
@@ -94,7 +95,7 @@ class Model(nn.Module):
         """
         return self.model(x)
 
-    def train_epoch(self, dataloader: DataLoader) -> float:
+    def train_epoch(self, dataloader: DataLoader, print_output=True) -> float:
         """
         Performs one epoch of training on the model
 
@@ -120,23 +121,24 @@ class Model(nn.Module):
             self.optimizer.zero_grad()
 
             train_loss += loss.item()
-
-            if batch % 32 == 0:
-                current = (batch + 1) * len(X)
-                print(
-                    f"Avg train loss: {train_loss / (batch+1):>7f} [{current:>5d}/{size:>5d}]",
-                    flush=True,
-                    end="\r",
-                )
+            if print_output:
+                if batch % 32 == 0:
+                    current = (batch + 1) * len(X)
+                    print(
+                        f"Avg train loss: {train_loss / (batch+1):>7f} [{current:>5d}/{size:>5d}]",
+                        flush=True,
+                        end="\r",
+                    )
         train_loss /= num_batches
-        print(
-            f"Avg train loss: {train_loss:>7f} [{size:>5d}/{size:>5d}]",
-            flush=True,
-        )
+        if print_output:
+            print(
+                f"Avg train loss: {train_loss:>7f} [{size:>5d}/{size:>5d}]",
+                flush=True,
+            )
 
         return train_loss
 
-    def test_epoch(self, dataloader: DataLoader) -> float:
+    def test_epoch(self, dataloader: DataLoader, print_output=True) -> float:
         """
         Performs one epoch (all batches of test data) of testing on the model
 
@@ -158,7 +160,8 @@ class Model(nn.Module):
                 test_loss += self.loss(pred, y).item()
 
         test_loss /= num_batches
-        print(f"Avg test loss: {test_loss:>7f}", flush=True)
+        if print_output:
+            print(f"Avg test loss: {test_loss:>7f}", flush=True)
 
         return test_loss
 
@@ -193,6 +196,7 @@ class Model(nn.Module):
         num_epochs: int = 2048,
         checkpoints: bool = False,
         save_model: bool = False,
+        print_output: bool = True,
     ) -> Tuple[List[float], ...]:
         """
         Trains the model
@@ -226,11 +230,16 @@ class Model(nn.Module):
                 os.mkdir(checkpoints_path)
 
         for epoch in range(num_epochs):
-            print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
-            train_loss.append(self.train_epoch(train_dataloader))
+            if print_output:
+                print(f"Epoch {epoch+1}\n-------------------------------", flush=True)
+            train_loss.append(
+                self.train_epoch(train_dataloader, print_output=print_output)
+            )
 
             if test_dataloader:
-                test_loss.append(self.test_epoch(test_dataloader))
+                test_loss.append(
+                    self.test_epoch(test_dataloader, print_output=print_output)
+                )
 
             if checkpoints:
                 file_path = checkpoints_path / f"epoch_{epoch+1}.pt"
@@ -255,9 +264,14 @@ class Model(nn.Module):
             )
 
             self.model.load_state_dict(checkpoint["model_state_dict"])
-            print(
-                f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
-            )
+            if print_output:
+                print(
+                    f"Epoch with lowest validation loss (epoch {epoch}) loaded into model"
+                )
+
+            # Remove checkpoints to save storage
+            shutil.rmtree(checkpoints_path)
+
             self.model.eval()
 
             if save_model:
@@ -365,10 +379,12 @@ class Dataset(Dataset):
         self.num_measurements = data.num_measurements
 
         # Convert numpy arrays to tensors and put them in the input and output arrays
-        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in data.inputs])
-        self.outputs = torch.stack([
-            torch.from_numpy(output).to(self.device) for output in data.outputs
-        ])
+        self.inputs = torch.stack(
+            [torch.from_numpy(input).to(self.device) for input in data.inputs]
+        )
+        self.outputs = torch.stack(
+            [torch.from_numpy(output).to(self.device) for output in data.outputs]
+        )
 
     def from_raw(
         self,
@@ -405,8 +421,12 @@ class Dataset(Dataset):
         self.num_coils = num_coils
         self.num_measurements = len(inputs)
         # Convert lists of numpy arrays to lists of tensors
-        self.inputs = torch.stack([torch.from_numpy(input).to(self.device) for input in inputs])
-        self.outputs = torch.stack([torch.from_numpy(output).to(self.device) for output in outputs])
+        self.inputs = torch.stack(
+            [torch.from_numpy(input).to(self.device) for input in inputs]
+        )
+        self.outputs = torch.stack(
+            [torch.from_numpy(output).to(self.device) for output in outputs]
+        )
 
     def from_numpy(
         self,
@@ -446,14 +466,18 @@ class Dataset(Dataset):
         self.num_measurements = len(inputs)
 
         # Converts numpy arrays to lists of tensors
-        self.inputs = torch.stack([
-            torch.from_numpy(inputs[:, i]).to(self.device)
-            for i in range(self.num_measurements)
-        ])
-        self.outputs = torch.stack([
-            torch.from_numpy(outputs[:, i]).to(self.device)
-            for i in range(self.num_measurements)
-        ])
+        self.inputs = torch.stack(
+            [
+                torch.from_numpy(inputs[:, i]).to(self.device)
+                for i in range(self.num_measurements)
+            ]
+        )
+        self.outputs = torch.stack(
+            [
+                torch.from_numpy(outputs[:, i]).to(self.device)
+                for i in range(self.num_measurements)
+            ]
+        )
 
     def __len__(self) -> int:
         """
@@ -485,7 +509,9 @@ class Dataset(Dataset):
         bad_indices = []
         for i in range(len(self)):
             # Check for nan
-            has_nan = np.isnan(self.inputs[i, :]).any() or np.isnan(self.outputs[i, :]).any()
+            has_nan = (
+                np.isnan(self.inputs[i, :]).any() or np.isnan(self.outputs[i, :]).any()
+            )
             # Position is outside valid domain
             bad_pos = (np.abs(self.outputs[i, :][:3]) > pos_threshold).any()
             # orientation is outside valid domain
