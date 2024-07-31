@@ -23,7 +23,7 @@ cable_angle = np.concatenate([np.array([0.0]), np.arange(16) * 4 * np.pi / 16])
 
 cable_deltas = np.zeros((4, 17))
 
-for i in range(16):
+for i in range(17):
     cable_deltas[:, i] = -cable_length[i] * np.array(
         [
             np.cos(cable_angle[i]),
