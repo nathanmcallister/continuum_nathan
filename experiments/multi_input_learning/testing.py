@@ -11,7 +11,7 @@ from utils_data import DataContainer
 
 average = False
 
-test_file = "./training_data/kinematic_2024_07_29_17_06_11.dat"
+test_file = "./test_data/kinematic_2024_07_30_11_30_29.dat"
 
 if average:
     old_data_container = DataContainer()
@@ -68,7 +68,7 @@ else:
     dataset = MultiInputDataset(1)
     dataset.load_from_DataContainer(data_container)
 
-model_files = glob.glob("models/07_29_2024/*.pt")
+model_files = glob.glob("models/07_30_2024/*.pt")
 model = MultiInputModel(4, 1, 1, [32, 32])
 
 

@@ -13,11 +13,11 @@ container.clean()
 _, pos, _ = container.to_numpy()
 
 avg_container = DataContainer()
-avg_container.file_import("./training_data/kinematic_2024_07_29_17_06_11.dat")
+avg_container.file_import("./test_data/kinematic_2024_07_30_11_30_29.dat")
 avg_container.clean()
 _, avg_pos, _ = avg_container.to_numpy()
 
-folder = "output/07_29_2024/"
+folder = "output/07_30_2024/"
 
 # Training loss vs epoch
 train_loss = np.concatenate(

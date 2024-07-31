@@ -56,6 +56,7 @@ plt.legend(
     borderaxespad=0,
     frameon=False,
 )
+print("line 59")
 on_axis = np.array(rmse[1:-1:2])
 off_axis = np.array(rmse[2:-1:2])
 _, p = f_oneway(on_axis, off_axis)

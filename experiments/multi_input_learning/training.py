@@ -21,8 +21,6 @@ old_length = len(dataset)
 dataset.clean()
 print(f"Removed {old_length - len(dataset)} faulty measurements from dataset")
 
-print(dataset[:3])
-
 
 def train():
     now = datetime.datetime.now()
@@ -30,14 +28,14 @@ def train():
 
     # Training
     split_datasets = torch.utils.data.random_split(dataset, [0.75, 0.25])
-    train_dataloader = DataLoader(split_datasets[0], batch_size=64)
-    validation_dataloader = DataLoader(split_datasets[1], batch_size=64)
+    train_dataloader = DataLoader(split_datasets[0], batch_size=64, shuffle=True)
+    validation_dataloader = DataLoader(split_datasets[1], batch_size=64, shuffle=True)
 
     model = MultiInputModel(
         num_cables=4,
         num_coils=1,
         num_previous_inputs=1,
-        hidden_layers=[32, 32],
+        hidden_layers=[64, 32],
         loss=PoseLoss(),
         save_path=f"models/{file_name}.pt",
     )
