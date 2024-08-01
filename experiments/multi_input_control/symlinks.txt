@@ -1,4 +1,7 @@
 ANN.py
+continuum_arduino.py
+continuum_aurora.py
+continuum_control.py
 kinematics.py
 multi_input.py
 utils_data.py

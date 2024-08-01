@@ -18,7 +18,7 @@ avg_container.file_import("./test_data/kinematic_2024_07_30_11_30_29.dat")
 avg_container.clean()
 _, avg_pos, _ = avg_container.to_numpy()
 
-folder = "output/07_30_2024/"
+folder = "output/big_07_30_2024/"
 
 # Training loss vs epoch
 train_loss_files = sorted(glob(f"{folder}real_train*"))
