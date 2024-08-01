@@ -7,13 +7,13 @@ import glob
 import ANN
 import utils_data
 
-test_file = "training_data/meas_2024_07_22_20_31_19.dat"
+test_file = "./test_data/kinematic_2024_07_30_11_30_29.dat"
 
 dataset = ANN.Dataset()
 dataset.load_from_file(test_file)
 dataset.clean()
 
-model_files = glob.glob("models/real_07_17_2024/*.pt")
+model_files = sorted(glob.glob("models/real_07_17_2024/*.pt"))
 
 model = ANN.Model(
     input_dim=4, output_dim=6, hidden_layers=[32, 32], loss=ANN.PoseLoss()

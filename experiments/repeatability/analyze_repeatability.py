@@ -7,7 +7,7 @@ import utils_data
 import kinematics
 
 container = utils_data.DataContainer()
-container.file_import("./output/data_2024_07_30_14_10_35.dat")
+container.file_import("./output/data_2024_07_31_10_59_15.dat")
 all_cable_deltas, all_pos, all_tang = container.to_numpy()
 
 
@@ -56,16 +56,15 @@ plt.legend(
     borderaxespad=0,
     frameon=False,
 )
-print("line 59")
-on_axis = np.array(rmse[1:-1:2])
-off_axis = np.array(rmse[2:-1:2])
+on_axis = np.array(rmse[1::2])
+off_axis = np.array(rmse[2::2])
 _, p = f_oneway(on_axis, off_axis)
 print(f"On axis mean RMSE: {on_axis.mean():.3f}")
 print(f"Off axis mean RMSE: {off_axis.mean():.3f}")
 print(f"P-value for RMSE value on axis vs off axis: {p}")
 
-higher = np.array(rmse[1:9])
-lower = np.array(rmse[9:-1])
+higher = np.array(rmse[1:9:2])
+lower = np.array(rmse[9::2])
 _, p = f_oneway(higher, lower)
 print(f"Low tension mean RMSE: {higher.mean():.3f}")
 print(f"High tension mean RMSE: {lower.mean():.3f}")

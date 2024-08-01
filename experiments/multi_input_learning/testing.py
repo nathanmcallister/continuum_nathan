@@ -68,7 +68,7 @@ else:
     dataset = MultiInputDataset(1)
     dataset.load_from_DataContainer(data_container)
 
-model_files = glob.glob("models/07_30_2024/*.pt")
+model_files = sorted(glob.glob("models/07_30_2024/*.pt"))
 model = MultiInputModel(4, 1, 1, [32, 32])
 
 
