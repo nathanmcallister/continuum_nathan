@@ -10,8 +10,8 @@ pip install -r requirements.txt
 The thesis associated with this repository can be read [here](https**://drive.google.com/file/d/1uIR_xviVqUKbwXYV8wjdk6yPhhzn69-D/view?usp=sharing).
 
 The structure of the repository is as follows:
- - ****Arduino**: Contains all code for the Arduino
- - ****Data**: All raw data from the Aurora is stored here.  Also contains a script to sync with the Halter-Puppet
+ - **Arduino**: Contains all code for the Arduino
+ - **Data**: All raw data from the Aurora is stored here.  Also contains a script to sync with the Halter-Puppet
  - **Experiments**: Contains all of the scripts associated with each experiment and its figures.  The experiments are
    - **Aurora timing**: Finding how long communication with the Aurora takes
    - **Base position**: Locating the position of the base (and therefore spine) within the registered frame
@@ -42,7 +42,7 @@ The structure of the repository is as follows:
    - **Kinematics**: Useful calculations/ functions for kinematic modeling.
    - **Pivot Cal RANSAC**: Performs pivot calibration of a pen probe using RANSAC to remove outliers.
    - **Rigid registration**: Used to register model and tip frames, generating necessary transformations.
-   Symlink setup**: This function creates all symlinks in the experiment, setup, and testing folders by linking contents found in a symlinks.txt text file.
+   - **Symlink setup**: This function creates all symlinks in the experiment, setup, and testing folders by linking contents found in a symlinks.txt text file.
    - **Utils data**: Used for saving and importing data from the robot.
  - **Setup**: Scripts used to setup the robot.
  - **Testing**: Used to test the different scripts in the Python folder.
