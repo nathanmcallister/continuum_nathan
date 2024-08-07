@@ -2,7 +2,10 @@
 
 This repository contains all of the code for the Halter Lab's continuum robot development.  Everything from registration, communication with the Aurora and Arduino, constant curvature models, training and testing of models, and controller development can be found in the repository.
 
-All necessary Python libraries can be found in requirements.txt.
+All necessary Python libraries can be found in requirements.txt.  They can be installed using the following command:
+```bash
+pip install -r requirements.txt
+```
 
 The structure of the repository is as follows:
  - Arduino: Contains all code for the Arduino
