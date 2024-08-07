@@ -7,6 +7,8 @@ All necessary Python libraries can be found in requirements.txt.  They can be in
 pip install -r requirements.txt
 ```
 
+The thesis associated with this repository can be read [here](Wolfe_MS_Thesis_Final.pdf).
+
 The structure of the repository is as follows:
  - Arduino: Contains all code for the Arduino
  - Data: All raw data from the Aurora is stored here.  Also contains a script to sync with the Halter-Puppet
