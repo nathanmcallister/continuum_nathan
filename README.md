@@ -11,8 +11,10 @@ The thesis associated with this repository can be read [here](https**://drive.go
 
 The structure of the repository is as follows:
  - **Arduino**: Contains all code for the Arduino
+
  - **Data**: All raw data from the Aurora is stored here.  Also contains a script to sync with the Halter-Puppet
- - **Experiments**: Contains all of the scripts associated with each experiment and its figures.  The experiments are
+
+ - **Experiments**: Contains all of the scripts associated with each experiment and its figures.  The experiments are:
    - **Aurora timing**: Finding how long communication with the Aurora takes
    - **Base position**: Locating the position of the base (and therefore spine) within the registered frame
    - **Camarillo fitting**: Used to determine the Caramillo stiffness parameters $k_a, k_b$ from data.
@@ -32,7 +34,9 @@ The structure of the repository is as follows:
    - **Sweep**: Sweep the robot around the workspace to see how position changes with cable displacements.
    - **Tensioning**: How to tension the cables in the robot.
    - **Two-segment learning**: Improvements to the two-segment models in training.
+ 
  - **Matlab**: Contains all Matlab code
+ 
  - **Python**: Contains all Python code
    - **Learning**: All classes and functions needed to train a model.
    - **Modeling**: Contains Mike and Camarillo constant curvature models, and all utils needed to run them.
@@ -44,7 +48,11 @@ The structure of the repository is as follows:
    - **Rigid registration**: Used to register model and tip frames, generating necessary transformations.
    - **Symlink setup**: This function creates all symlinks in the experiment, setup, and testing folders by linking contents found in a symlinks.txt text file.
    - **Utils data**: Used for saving and importing data from the robot.
+ 
  - **Setup**: Scripts used to setup the robot.
+ 
  - **Testing**: Used to test the different scripts in the Python folder.
+
  - **Tools**: Contains all transformations and pen probes.
+ 
  - **Utils**: Other miscellaneous utilities.
