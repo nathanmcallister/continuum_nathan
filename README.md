@@ -7,7 +7,7 @@ All necessary Python libraries can be found in requirements.txt.  They can be in
 pip install -r requirements.txt
 ```
 
-The thesis associated with this repository can be read [here](Wolfe_MS_Thesis_Final.pdf).
+The thesis associated with this repository can be read [here](https://drive.google.com/file/d/1uIR_xviVqUKbwXYV8wjdk6yPhhzn69-D/view?usp=sharing).
 
 The structure of the repository is as follows:
  - Arduino: Contains all code for the Arduino
