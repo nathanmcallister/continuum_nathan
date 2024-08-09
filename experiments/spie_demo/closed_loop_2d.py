@@ -1,6 +1,7 @@
 from continuum_arduino import ContinuumArduino
 from continuum_aurora import ContinuumAurora
 import torch
+from kinematics import dcm_2_quat, quat_2_dcm
 import numpy as np
 from pathlib import Path
 from scipy.spatial import distance
@@ -24,22 +25,32 @@ time.sleep(2)
 
 range = 30
 
-setpoints = np.array([[0, 5], [0, 10], [0, 15], [0, 20], [0, 25], [0, 30], [0, 0], 
-                      [5, 0], [10, 0], [15, 0], [20, 0], [25, 0], [30, 0], [0, 0],
-                      [0, -5], [0, -10], [0, -15], [0, -20], [0, -25], [0, -30], [0, 0],
-                      [-5, 0], [-10, 0], [-15, 0], [-20, 0], [-25, 0], [-30, 0], [0, 0]]) # x,y
+setpoints = np.array([[0, 0], [0, 8], [0, 16], [0, 24], 
+                      [8, 0], [16, 0], [24, 0],
+                      [0, -8], [0, -16], [0, -24],
+                      [-8, 0], [-16, 0], [-24, 0]]) # x,y
 
-# setpoints = np.array([[1.58, 26.98], [0, 0]])
 
 def get_error(setpoint):
     raw_trans = aurora.get_aurora_transforms(probe_list)
     T_tip_2_model = aurora.get_T_tip_2_model(raw_trans["0A"])
     T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip
     elec_pos = np.array([T_electrode_2_model[0,3], T_electrode_2_model[1,3]])
-    print(f"tip position = {np.array([T_tip_2_model[0,3], T_tip_2_model[1,3]])}")
-    print(f"electrode position = {elec_pos}")
     error = (setpoint - elec_pos)
+    print(error)
     return error
+
+def get_pos():
+    raw_trans = aurora.get_aurora_transforms(probe_list)
+    T_tip_2_model = aurora.get_T_tip_2_model(raw_trans["0A"])
+    T_electrode_2_model = T_tip_2_model @ T_electrode_2_tip
+    elec_pos = np.array(T_electrode_2_model[:3,3], dtype=np.float64)
+    print(f"elec pos = {elec_pos}")
+    elec_rot = np.array(dcm_2_quat(T_electrode_2_model[:3,:3]), dtype=np.float64)
+    print(f"elec_rot = {elec_rot}")
+    data = np.concatenate([elec_pos, elec_rot])
+    print(f"(combined = {data})")
+    return data
 
 def to_setpoint(setpoint, is_compressed):
     global dls
@@ -60,6 +71,10 @@ def to_setpoint(setpoint, is_compressed):
     else:
         print("error is sufficiently low")
 
+print(f"{len(setpoints)} setpoints")
+data = np.zeros([len(setpoints),10])
+i = 0
+
 for setpoint in setpoints:
     to_setpoint(setpoint, 'c')
     print("reached setpoint compressed")
@@ -68,3 +83,7 @@ for setpoint in setpoints:
     print("\nPress any key to continue...")
     input()
 
+    data[i] = np.concatenate([[i], setpoint, get_pos()]) # [ID, xset, yset, x, y, z, q1, q2, q3, q4]
+    i = i + 1
+
+np.savetxt(Path("output/closed_loop_control_1"), data, delimiter=',')
