@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from utils_data import DataContainer
+from glob import glob
 
 num_iterations = 10
 
@@ -13,26 +14,28 @@ container.clean()
 _, pos, _ = container.to_numpy()
 
 avg_container = DataContainer()
-avg_container.file_import("./training_data/kinematic_2024_07_29_17_06_11.dat")
+avg_container.file_import("./test_data/kinematic_2024_07_30_11_30_29.dat")
 avg_container.clean()
 _, avg_pos, _ = avg_container.to_numpy()
 
-folder = "output/07_29_2024/"
+folder = "output/big_07_30_2024/"
 
 # Training loss vs epoch
+train_loss_files = sorted(glob(f"{folder}real_train*"))
 train_loss = np.concatenate(
     [
-        np.loadtxt(f"{folder}real_train_loss_{i}.dat", delimiter=",").reshape((1, -1))
+        np.loadtxt(train_loss_files[i], delimiter=",").reshape((1, -1))
         for i in range(num_iterations)
     ],
     axis=0,
 )
 
 # Validation loss vs epoch
+validation_loss_files = sorted(glob(f"{folder}real_validation*"))
 validation_loss = np.concatenate(
     [
         np.loadtxt(
-            f"{folder}real_validation_loss_{i}.dat",
+            validation_loss_files[i],
             delimiter=",",
         ).reshape((1, -1))
         for i in range(num_iterations)
@@ -46,6 +49,8 @@ tang_loss = np.loadtxt(f"{folder}real_tang_test_loss.dat", delimiter=",")
 
 avg_pos_loss = pos_loss.mean(axis=0)
 avg_tang_loss = tang_loss.mean(axis=0)
+model_avg_pos_loss = pos_loss.mean(axis=1)
+model_avg_tang_loss = tang_loss.mean(axis=1)
 
 # Means and stdevs
 avg_train_loss = train_loss.mean(axis=0)
@@ -90,7 +95,7 @@ plt.title("Average Batch Loss vs Epoch")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.legend()
-plt.ylim((0.5, 10))
+plt.ylim((0.3, 10))
 
 plt.figure()
 for i in range(0, 10, 2):
@@ -126,15 +131,21 @@ plt.xlabel("Model")
 plt.ylabel("Orientation Error (degrees)")
 
 plt.figure()
-plt.hist(pos_loss[6, :], 50)
-plt.title(f"Position Error of Best Model (Mean: {avg_pos_loss[6]:.3f} mm)")
+min_pos_error_model = min(enumerate(model_avg_pos_loss.tolist()), key=lambda x: x[1])[0]
+plt.hist(pos_loss[min_pos_error_model, :], 50)
+plt.title(
+    f"Position Error of Best Model (Model {min_pos_error_model+1}, Mean: {model_avg_pos_loss[min_pos_error_model]:.3f} mm)"
+)
 plt.xlabel("Position Error (mm)")
 plt.ylabel("Count")
 
+min_tang_error_model = min(enumerate(model_avg_tang_loss.tolist()), key=lambda x: x[1])[
+    0
+]
 plt.figure()
-plt.hist(180 / np.pi * tang_loss[6, :], 50)
+plt.hist(180 / np.pi * tang_loss[min_tang_error_model, :], 50)
 plt.title(
-    f"Orientation Error of Best Model (Mean: ${180/np.pi*avg_tang_loss[6]:.3f}^\circ$)"
+    f"Orientation Error of Best Model (Model {min_tang_error_model+1}, Mean: ${180/np.pi*model_avg_tang_loss[min_tang_error_model]:.3f}^\circ$)"
 )
 plt.xlabel("Orientation Error (degrees)")
 plt.ylabel("Count")

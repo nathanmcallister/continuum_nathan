@@ -2,9 +2,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import utils_data
+from glob import glob
 
 num_iterations = 10
-
+folder = "./output/real_07_17_2024/"
 # File inputs
 # Datacontainer
 container = utils_data.DataContainer()
@@ -13,31 +14,28 @@ container.clean()
 _, pos, _ = container.to_numpy()
 
 # Training loss vs epoch
+train_loss_files = sorted(glob(f"{folder}real_train*"))
 train_loss = np.concatenate(
     [
-        np.loadtxt(
-            f"output/real_07_17_2024/real_train_loss_{i}.dat", delimiter=","
-        ).reshape((1, -1))
+        np.loadtxt(train_loss_files[i], delimiter=",").reshape((1, -1))
         for i in range(num_iterations)
     ],
     axis=0,
 )
 
 # Validation loss vs epoch
+validation_loss_files = sorted(glob(f"{folder}real_validation*"))
 validation_loss = np.concatenate(
     [
-        np.loadtxt(
-            f"output/real_07_17_2024/real_validation_loss_{i}.dat",
-            delimiter=",",
-        ).reshape((1, -1))
+        np.loadtxt(validation_loss_files[i], delimiter=",").reshape((1, -1))
         for i in range(num_iterations)
     ],
     axis=0,
 )
 
 # Test loss vs model
-pos_loss = np.loadtxt("output/real_07_17_2024/real_pos_test_loss.dat", delimiter=",")
-tang_loss = np.loadtxt("output/real_07_17_2024/real_tang_test_loss.dat", delimiter=",")
+pos_loss = np.loadtxt(f"{folder}real_pos_test_loss.dat", delimiter=",")
+tang_loss = np.loadtxt(f"{folder}real_tang_test_loss.dat", delimiter=",")
 
 avg_pos_loss = pos_loss.mean(axis=0)
 avg_tang_loss = tang_loss.mean(axis=0)

@@ -30,8 +30,8 @@ def train():
     save_dir = f"models/{now.year}_{now.month:02n}_{now.day:02n}_{now.hour:02n}_{now.minute:02n}_{now.second:02n}/"
     # Training
     split_datasets = torch.utils.data.random_split(dataset, [0.75, 0.25])
-    train_dataloader = DataLoader(split_datasets[0], batch_size=64)
-    validation_dataloader = DataLoader(split_datasets[1], batch_size=64)
+    train_dataloader = DataLoader(split_datasets[0], batch_size=64, shuffle=True)
+    validation_dataloader = DataLoader(split_datasets[1], batch_size=64, shuffle=True)
 
     model = ANN.Model(
         input_dim=4,

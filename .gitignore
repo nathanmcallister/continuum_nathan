@@ -105,3 +105,6 @@ checkpoints
 ./experiments/model_comparison/multi_input.py
 ./experiments/hysteresis_replication/utils_cc.py
 ./experiments/hysteresis_replication/camarillo_cc.py
+./experiments/multi_input_control/continuum_arduino.py
+./experiments/multi_input_control/continuum_aurora.py
+./experiments/multi_input_control/continuum_control.py
